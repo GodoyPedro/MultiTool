@@ -1,0 +1,6 @@
+title = "TOML Example"
+[paths]
+repositorios = "C:/Users/Pedro/Desktop/Pedro/Python/repos_test"
+
+[config_files]
+apis_properties = "apis_properties.json"

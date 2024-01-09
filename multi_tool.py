@@ -11,7 +11,8 @@ import json
 from tkinter.tix import *
 from ttkthemes import ThemedTk
 import re
-
+import toml
+import xml.etree.ElementTree as ET
 # s-3pl.host
 
 class Error:
@@ -24,8 +25,9 @@ class Error:
 class Properties:
     def __init__(self) -> None:
         self.dir_base = os.getcwd()
-        self.ruta_base = "C:/Users/pedro.godoy/Desktop/Repositorios Astara"
-        self.ruta_properties = "apis_properties.json"
+        self.ruta_base = None
+        self.ruta_properties = None
+        self.__cargar_toml()
         self.repos_activos = self.get_git_branch()
         self.repo_activo = ""
         self.text_label = None
@@ -59,8 +61,16 @@ class Properties:
         self.combo = None
         self.text = None
 
+    def __cargar_toml(self):
+        try:
+            config = toml.load("config.toml")
+            self.ruta_base = rf'{config["paths"]["repositorios"]}'
+            self.ruta_properties = rf'{config["config_files"]["apis_properties"]}'
+        except Exception as e:
+            raise e
+
     def cargar_json_datos(self):
-        with open("apis_properties.json", "r") as f:
+        with open(self.ruta_properties, "r") as f:
             return json.load(f)  
 
     def get_git_branch(self):
@@ -103,23 +113,57 @@ class Properties:
         print(repos[element])
 
     def buscar_propertie(self, archivo_yaml, string_copiada_usuario):
-        string_copiada_usuario = string_copiada_usuario.replace("{","").replace("}","").replace("$","").split(".")
+        string_copiada_usuario = string_copiada_usuario.replace("{","").replace("}","").replace("$","").replace("secure::","").split(".")
         archivo = archivo_yaml
         if not archivo:
             return Error("Error")
         try:
             for propertie in string_copiada_usuario:
                 archivo = archivo[propertie]
+            es_secure, valor = self.__es_secure_propertie(archivo)
+            if es_secure:
+                return valor
             return archivo
-        except:
+        except Exception as e:
+            print(e)
             print("La propertie no existe")
         return "La propertie no existe"
+
+    def __desencriptar_propertie(self, propertie):
+        key = self.__buscar_encrypt_key()
+        print(key, propertie)
+        propertie_desencriptada = subprocess.Popen(["java","-cp","secure-properties-tool.jar","com.mulesoft.tools.SecurePropertiesTool","string","decrypt","Blowfish","CBC",key,propertie], stdout=subprocess.PIPE).communicate()[0]
+        return propertie_desencriptada.decode('UTF-8').rstrip()
+    
+    def __es_secure_propertie(self, propertie):
+        es_secure = False
+        valor = None
+        if type(propertie) == dict:
+            return es_secure,valor
+        
+        if propertie[:2] == "![" and propertie[-1] == "]":
+            es_secure = True
+            valor = self.__desencriptar_propertie(propertie[2:-1])
+        return es_secure,valor
 
     def __buscar_valores_env(self, cadena):
             patron = r'(?<=name="env" value=")[^"]+(?=")'
             valores = re.findall(patron, cadena)
             return valores
 
+    def __buscar_encrypt_key(self):
+        encrypt_key = None
+        try:
+            tree = ET.parse(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml")
+            resultados = tree.findall('.//{http://www.mulesoft.org/schema/mule/core}global-property')
+            for x in resultados:
+                if x.attrib['name'] != "env":
+                    encrypt_key = x.attrib['value']
+        except Exception as e:
+            print(f"{self.repo_activo} No tiene global")
+
+        return encrypt_key
+    
     def buscar_entorno_en_global(self):
         entorno = None
         try:
@@ -170,27 +214,19 @@ class Properties:
         print(self.rama_repo_activo)
         rutas_properties = self.__obtener_archivos_config()
         print(rutas_properties)
-        properties = []
+        properties = {}
         for ruta in rutas_properties:
             with open(ruta, 'r') as archivo:
+                if ruta.split("/")[-1] not in properties:
+                    properties[ruta.split("/")[-1]] = []
                 try:
                     contenido = yaml.safe_load(archivo)
-                    properties.append([ruta.split("/")[-1], self.buscar_propertie(contenido, string_copiada_usuario)])
+                    properties[ruta.split("/")[-1]].append(self.buscar_propertie(contenido, string_copiada_usuario))
                 except Exception as e:
                     print(f"Hubo un error al intentar cargar el archivo yaml: {ruta}")
                     contenido = None
-                    properties.append([ruta.split("/")[-1], Error(f"Hubo un error al intentar cargar el archivo yaml: {ruta}")])
-                
-
-        # for ruta in rutas_properties:
-        #     contenido = self.__cargar_yaml(ruta)
-
-                # Cargar el yaml
-                #   Generar errores (try except)
-                # Usar el yaml cargado para agregar a la lista de properties
-                #   No genera errores
-                
-
+                    properties[ruta.split("/")[-1]].append(f"Hubo un error al intentar cargar el archivo yaml: {ruta}")
+    
         return properties
 #s-proxy
     def __formatear_properties(self, properties):
@@ -221,17 +257,24 @@ class Properties:
                 except:
                     properties = "No existe"
                 print("properties", type(properties), properties)
-                properties_formateadas = self.__formatear_properties(properties)
+                string_a_mostrar, posiciones_a_colorear = self.__formatear_existencia_properties(properties)
                 # texto_properties_encontradas = "\n".join([prop for prop in properties if prop])
                 #color_fondo_texto = self.color["verde"] if texto_properties_encontradas else self.color["rojo"]
                 self.text.config(state=tk.NORMAL)
                 self.text.delete("1.0", tk.END)
-                self.text.insert(tk.END,properties_formateadas)
+                self.text.insert(tk.END,string_a_mostrar)
+                for i, posiciones in enumerate(posiciones_a_colorear):
+                    fila, largo = posiciones
+                    self.text.tag_add(f"x{i}", f"{fila}.0", f"{fila}.{largo}")
+                    self.text.tag_config(f"x{i}", foreground="green")
+                self.text.config(state=tk.DISABLED)
                 # self.text.insert(tk.END,properties if properties else "No existe la propertie" )
                 self.text.config(state=tk.DISABLED)
                 # self.text_label4.config(text=texto_properties_encontradas if texto_properties_encontradas else "No existe la propertie" ,bg=color_fondo_texto)
                 print(self.rama_repo_activo)
                 print(properties)
+
+                
 #s-proxy.port
     # def create_buttons(self, root, elements):
     #     button_frame = tk.Frame(root)
@@ -310,7 +353,7 @@ class Properties:
             resultados_p_dobles_limpias = [x.replace('p("',"").replace('")',"") for x in resultados_p_doble]
             #Aca estan todas las properties
             resultados = list(set(resultados_flows_limpias + resultados_mule_p_simples_limpias + resultados_mule_p_dobles_limpias + resultados_p_simples_limpias + resultados_p_dobles_limpias))
-
+            resultados = map(lambda x: x.replace("secure::",""), resultados)
             # Recorrer estas properties y fijarme si estan en el yaml de "yaml_junto"
             # Si estan no hago nada
             # Si no estan las agrego a dict_xmls

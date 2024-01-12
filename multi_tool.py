@@ -13,6 +13,8 @@ from ttkthemes import ThemedTk
 import re
 import toml
 import xml.etree.ElementTree as ET
+import requests
+from codecs import encode
 # s-3pl.host
 
 class Error:
@@ -27,6 +29,7 @@ class Properties:
         self.dir_base = os.getcwd()
         self.ruta_base = None
         self.ruta_properties = None
+        self.datos_encriptar = None
         self.__cargar_toml()
         self.repos_activos = self.get_git_branch()
         self.repo_activo = ""
@@ -66,6 +69,9 @@ class Properties:
             config = toml.load("config.toml")
             self.ruta_base = rf'{config["paths"]["repositorios"]}'
             self.ruta_properties = rf'{config["config_files"]["apis_properties"]}'
+            self.datos_encriptar = config["encryption"]
+            self.datos_encriptar["headers"]["Content-type"] = self.datos_encriptar["headers"]["Content-type"].replace("TOBEREPLACED", self.datos_encriptar["boundary"])
+
         except Exception as e:
             raise e
 
@@ -129,11 +135,40 @@ class Properties:
             print("La propertie no existe")
         return "La propertie no existe"
 
+    def __peticion_api_secure_properties(self, key, propertie):
+        dataList = []
+        json_data = {'operation': 'decrypt',
+            'algorithm': 'Blowfish',
+            'mode': 'CBC',
+            'key': key,
+            'value': propertie,
+            'method': 'string'}
+        boundary = self.datos_encriptar["boundary"]
+        url = self.datos_encriptar["url"]
+        headers = self.datos_encriptar["headers"]
+        for key, data in json_data.items():
+            dataList.append(encode('--' + boundary))
+            dataList.append(encode(f'Content-Disposition: form-data; name={key};'))
+            dataList.append(encode('Content-Type: {}'.format('text/plain')))
+            dataList.append(encode(''))
+            dataList.append(encode(data))
+
+        dataList.append(encode('--'+boundary+'--'))
+        dataList.append(encode(''))
+        body = b'\r\n'.join(dataList)
+        response = requests.request("POST", url, headers=headers, data=body, files=[])
+        return json.loads(response.text)["property"]
+
+    # Sin uso por ahora
+    def __desencriptar_usando_java(key, propertie):
+        propertie_desencriptada = subprocess.Popen(["java","-cp","secure-properties-tool.jar","com.mulesoft.tools.SecurePropertiesTool","string","decrypt","Blowfish","CBC",key,propertie], stdout=subprocess.PIPE).communicate()[0]
+        return propertie_desencriptada.decode('UTF-8').rstrip()
+
     def __desencriptar_propertie(self, propertie):
         key = self.__buscar_encrypt_key()
         print(key, propertie)
-        propertie_desencriptada = subprocess.Popen(["java","-cp","secure-properties-tool.jar","com.mulesoft.tools.SecurePropertiesTool","string","decrypt","Blowfish","CBC",key,propertie], stdout=subprocess.PIPE).communicate()[0]
-        return propertie_desencriptada.decode('UTF-8').rstrip()
+        valor_desencriptada = self.__peticion_api_secure_properties(key, propertie)
+        return valor_desencriptada
     
     def __es_secure_propertie(self, propertie):
         es_secure = False
@@ -301,7 +336,10 @@ class Properties:
             for key in archivo:
                 if key not in yaml_junto:
                     yaml_junto[key] = archivo[key]
-                else:
+                elif yaml_junto[key] == archivo[key] and type(yaml_junto[key]) == str and type(archivo[key]) == str:
+                    pass
+                elif yaml_junto[key] != archivo[key] and type(yaml_junto[key]) == str and type(archivo[key]) == str:
+                    valor = yaml_junto[key]
                     yaml_junto[key].update(archivo[key])
         
         return yaml_junto

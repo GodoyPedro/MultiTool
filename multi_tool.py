@@ -99,14 +99,14 @@ class Encriptacion:
 
         return encrypt_key
 
-    def desencriptar_propertie(self, propertie: str) -> str:
+    def __desencriptar_propertie(self, propertie: str) -> str:
         """
         Metodo publico para desencriptar una propiedad.
         La llava utilizada para desencriptar la misma, sera obtenida del archivo 
         global.xml correspondiente al respositorio activo.
 
         Args:
-            propertie (str): Cadena de texto a desencriptar .
+            propertie (str): Cadena de texto a desencriptar.
 
         Returns:
             str: Cadena de texto desencriptada.
@@ -387,7 +387,10 @@ class Archivos:
     
         return properties
 
-    def __juntar_yamls(self):
+    def __juntar_yamls(self) -> None:
+        """
+        Averigua rutas de archivos .yaml, los abre y los junta en 1 solo diccionario.
+        """
         rutas_properties = self.__obtener_rutas_archivos_config_a_revisar()
         yaml_junto = {}
         for ruta in rutas_properties:
@@ -516,7 +519,19 @@ class Properties:
         self.text_label4.config(text="",bg=self.color["fondo"])
         print(repos[element])
 
-    def buscar_propertie(self, archivo_yaml, string_copiada_usuario):
+    def buscar_propertie(self, archivo_yaml:str, string_copiada_usuario:str) -> str:
+        """
+        Toma un archivo yaml en forma de dict y lo que haya copiado el usuario al apretar CTRL+c
+        Limpia la cadena de texto e intenta encontrar la propiedad en el archivo yaml.
+        Si la propiedad que se encontro es una secure propertie, se va a intentar desencriptarla.
+        
+        Args:
+            archivo_yaml (str): Archivo yaml en forma de dict.
+            string_copiada_usuario (str): Lo que haya en el portapapeles del usuario.
+
+        Returns:
+            str: El valor de la propiedad encontrada o "La propertie no existe"
+        """
         string_copiada_usuario = string_copiada_usuario.replace("{","").replace("}","").replace("$","").replace("secure::","").split(".")
         archivo = archivo_yaml
         if not archivo:
@@ -642,7 +657,18 @@ class Properties:
         
         return rutas_properties
 
-    def intentar_abrir_archivo(self, string_copiada_usuario):
+    def intentar_abrir_archivo(self, string_copiada_usuario: str) -> dict[str:list[str]]:
+        """
+        Obtiene las rutas de los archivos a revisar, abre cada uno y busca la propiedad
+        que copio el usuario
+
+        Args:
+            string_copiada_usuario (str): Lo que haya en el portapapeles del usuario.
+
+        Returns:
+            dict[str:list[str]]: Un diccionario cuya clave es el nombre del archivo y como valor
+            una lista donde se guardaran las propiedades encontradas
+        """
         print(self.repo_activo)
         print(self.rama_repo_activo)
         rutas_properties = self.__obtener_rutas_archivos_config_a_revisar()
@@ -675,8 +701,18 @@ class Properties:
             
         return string_a_mostrar
 #app.name
-    def handle_key_event(self, event):
-        if self.activo and event.name == "c" and keyboard.is_pressed("ctrl"):
+    def handle_key_event(self, evento:keyboard._Event) -> None:
+        """
+        Cada vez que se aprete algo en el teclado se llama a esta funcion.
+        Si se presiono la combinacion CTRL+c entonces se iniciara el proceso que buscara en 
+        los archivos yaml correspondientes la supuesta propiedad que fue copiada.
+        Ademas formatea la respuesta de las propiedades de forma legible
+        para su posterior escritura en la interfaz.
+
+        Args:
+            evento (keyboard._Event): _description_
+        """
+        if self.activo and evento.name == "c" and keyboard.is_pressed("ctrl"):
             print("Se presionó Ctrl+C")
             time.sleep(0.1)
             string_copiada_usuario = pyperclip.paste()
@@ -747,6 +783,19 @@ class Properties:
 #   Si el campo es una string: siempre tengo que priorizar el del entorno
 
     def __formatear_existencia_properties(self, dict_xmls):
+        """
+        Devuelve una cadena de texto de una sola linea con espacios y "\n" y una lista de posiciones.
+        Estas posiciones hacen referencia a la posicion del nombre del archivo 
+        dentro de la cadena de texto de una sola linea
+        El proposito es colorear los nombres de los archivos utilizando las posiciones retornadas.
+
+        Args:
+            dict_xmls (dict[str,list[str]]): Diccionario donde se especifica el nombre del archivo como clave
+        y como valor, una lista de las propiedades correspondientes a dicho archivo.
+
+        Returns:
+            tuple[str,list[list[int,int]]]: Una cadena de texto de una sola linea con espacios y "\n" y una lista de posiciones.
+        """
         posiciones_a_colorear = []
         string_a_devolver = ""
         fila = 1
@@ -762,7 +811,18 @@ class Properties:
                 fila += 1
         return string_a_devolver, posiciones_a_colorear
 
-    def chequear_existencia_properties(self):
+    def chequear_existencia_properties(self) -> None:
+        """
+        Este metodo agrega la funcionalidad de buscar si las propiedades definidas en el codigo,
+        estan presentes en los archivos de configuracion correspondientes.
+        Para realizar este proceso se averiguan todos los archivos yaml en los que hay que buscar una propiedad
+        (archivo correspondiente al entorno y global.yaml mas alguno extra particular de cada api)
+        Luego se juntan todos los archivos yaml en 1 solo para facilitar la busqueda.
+        Usando expresiones regex se buscan properties en todos los archivos .xml.
+        Todas las propiedades encontradas se intentan encontrar en los archivos .yaml de configuracion.
+        Si alguna no se logra encontrar, se guarda en una estructura interna a la funcion para luego 
+        mostrarla en la interfaz.
+        """
         if not self.activo:
             return
         rutas_properties = self.__obtener_rutas_archivos_config_a_revisar()

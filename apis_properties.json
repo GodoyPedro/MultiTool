@@ -230,6 +230,7 @@
 	},
 	"s-ecc-driber":{
 	   "ruta":["src/main/resources"], 
+	   "develop_pr":["src/main/resources/s-ecc-driber-devproj-config.yaml"],
 	   "develop_sp":["src/main/resources/s-ecc-driber-dev-config.yaml"],
 	   "global":["src/main/resources/s-ecc-driber-global-config.yaml"],
 	   "release_pr":["src/main/resources/s-ecc-driber-latam-config.yaml"],

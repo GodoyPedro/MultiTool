@@ -4,7 +4,6 @@ import keyboard
 import pyperclip
 import time
 import os
-import textwrap
 import subprocess
 import yaml
 import json
@@ -532,7 +531,7 @@ class Properties:
         Returns:
             str: El valor de la propiedad encontrada o "La propertie no existe"
         """
-        string_copiada_usuario = string_copiada_usuario.replace("{","").replace("}","").replace("$","").replace("secure::","").split(".")
+        string_copiada_usuario = string_copiada_usuario.replace("{","").replace("}","").replace("$","").replace("secure::","").replace("Mule::p","").replace("p::","").replace("(","").replace(")","").replace('"',"").replace("'","").split(".")
         archivo = archivo_yaml
         if not archivo:
             return Error("Error")
@@ -769,9 +768,7 @@ class Properties:
             for key in archivo:
                 if key not in yaml_junto:
                     yaml_junto[key] = archivo[key]
-                elif yaml_junto[key] == archivo[key] and type(yaml_junto[key]) == str and type(archivo[key]) == str:
-                    pass
-                elif yaml_junto[key] != archivo[key] and type(yaml_junto[key]) == str and type(archivo[key]) == str:
+                else:
                     valor = yaml_junto[key]
                     yaml_junto[key].update(archivo[key])
         

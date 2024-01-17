@@ -26,7 +26,16 @@ class Error:
 
 class Encriptacion:
 
-    def __peticion_api_secure_properties(self, key:str, propertie:str) -> str:
+    def __init__(self, datos_encriptar: str) -> None:
+        """
+        Recibe los datos cargados del archivo .toml
+
+        Args:
+            datos_encriptar (str): Diccionario con los datos cargados del .toml
+        """
+        self.datos_encriptar = datos_encriptar
+
+    def __peticion_api_secure_properties(self, key:str, propertie:str) -> str: #✅
         """
         Utilizando una llave y un valor a desencriptar, realiza una peticion
         hacia una url que va a devolver el valor desencriptado.
@@ -79,26 +88,30 @@ class Encriptacion:
         propertie_desencriptada = subprocess.Popen(["java","-cp","secure-properties-tool.jar","com.mulesoft.tools.SecurePropertiesTool","string","decrypt","Blowfish","CBC",key,propertie], stdout=subprocess.PIPE).communicate()[0]
         return propertie_desencriptada.decode('UTF-8').rstrip()
     
-    def __buscar_encrypt_key(self):
+    def __buscar_encrypt_key(self, ruta_base:str, repo_activo:str) -> str: #✅
         """
         Toma el archivo global.xml del repositorio activo y busca la variable "encryptKey".
+
+        Args:
+            ruta_base (str): Ruta de la carpeta donde estan todos los repositorios
+            repo_activo (str): Nombre del repositorio activo
 
         Returns:
             str: Llave para desencriptar propiedades.
         """
         encrypt_key = None
         try:
-            tree = ET.parse(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml")
+            tree = ET.parse(rf"{ruta_base}\berge-mulesoft-{repo_activo}\src\main\mule\global.xml")
             resultados = tree.findall('.//{http://www.mulesoft.org/schema/mule/core}global-property')
             for x in resultados:
                 if x.attrib['name'] != "env":
                     encrypt_key = x.attrib['value']
         except Exception as e:
-            print(f"{self.repo_activo} No tiene global")
+            print(f"{repo_activo} No tiene global")
 
         return encrypt_key
 
-    def __desencriptar_propertie(self, propertie: str) -> str:
+    def __desencriptar_propertie(self, propertie: str, ruta_base:str, repo_activo:str) -> str: #✅
         """
         Metodo publico para desencriptar una propiedad.
         La llava utilizada para desencriptar la misma, sera obtenida del archivo 
@@ -110,13 +123,12 @@ class Encriptacion:
         Returns:
             str: Cadena de texto desencriptada.
         """
-        key = self.__buscar_encrypt_key()
+        key = self.__buscar_encrypt_key(ruta_base, repo_activo)
         print(key, propertie)
         valor_desencriptada = self.__peticion_api_secure_properties(key, propertie)
         return valor_desencriptada
 
-
-    def __es_secure_propertie(self, propertie:str) -> tuple:
+    def es_secure_propertie(self, propertie:str, ruta_base:str, repo_activo:str) -> tuple: #✅
         """
         Comprueba si el valor de una propiedad esta encriptado.
         Si asi lo fuere, intenta desencriptarla y devuelve su valor.
@@ -135,7 +147,7 @@ class Encriptacion:
         
         if propertie[:2] == "![" and propertie[-1] == "]":
             es_secure = True
-            valor = self.__desencriptar_propertie(propertie[2:-1])
+            valor = self.__desencriptar_propertie(propertie[2:-1], ruta_base, repo_activo)
         return es_secure,valor
 
 class Interfaz:
@@ -183,27 +195,18 @@ class Interfaz:
                 fila += 1
         return string_a_devolver, posiciones_a_colorear
 
-    def click_cabecera(self, boton, accion) -> None:
+    def cambiar_color_boton(self, boton:tk.Button, activo:bool) -> None:
         """
-        Cada vez que se presiona un boton, se ejecuta esta funcion.
-        Recibe el objeto boton y la accion asociada a ese boton en forma de cadena de texto.
-        Dependiendo de la accion seleccionada, se ejecutara el codigo correspondiente.
+        Cambia el color y texto del boton dependiendo si esta o no activo.
 
         Args:
             boton (tk.Button): Objeto del boton presionado.
-            accion (str): Cadena de texto con la accion correspondiente al boton.
+            activo (bool): Identifica si el boton tiene o no que estar activo
         """
-        if accion == "Activar":
-            self.activo = not self.activo
-            texto_boton = "Activo" if self.activo else "Inactivo"
-            boton[0].config(text=texto_boton)
-            for btn in boton:
-                btn.config(bg=self.color[texto_boton.lower()])
-
-        elif accion == "ComprobarProperties":
-            if not self.activo:
-                return
-            self.chequear_existencia_properties()
+        texto_boton = "Activo" if activo else "Inactivo"
+        boton[0].config(text=texto_boton)
+        for btn in boton:
+            btn.config(bg=self.color[texto_boton.lower()])
 
     def crear_botones_cabecera(self, root:ThemedTk) -> None:
         """
@@ -229,6 +232,11 @@ class Interfaz:
         button4.config(command=lambda btn=button4: self.click_cabecera(btn,None))
         button1.config(bg="#00c22d")
 
+
+# self.combo deberia existir en esta clase
+# la funcion deberia existir en Propiedades
+# la funcion deberia tomar como parametro lo que haya en el combobox
+# 
     def cambio_seleccion_api(self) -> None:
         """
         Esta funcion se ejecuta cada vez que se selecciona una nueva opcion
@@ -240,10 +248,55 @@ class Interfaz:
         element = self.combo.get()
         self.repo_activo = str(element)
         self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
-        self.text_label.config(text=f"La API seleccionada es: {str(element)}")
-        self.text_label2.config(text=f"La rama seleccionada es: {self.repos_activos[self.repo_activo]['branch']}")
+        self.text_label.config(text=f"La API seleccionada es: {self.repo_activo}")
+        self.text_label2.config(text=f"La rama seleccionada es: {self.rama_repo_activo}")
         self.text_label3.config(text="")
         self.text_label4.config(text="",bg=self.color["fondo"])
+
+    # def cambiar_labels(self, api, rama):
+    #     self.text_label.config(text=f"La API seleccionada es: {str(api)}")
+    #     self.text_label2.config(text=f"La rama seleccionada es: {rama}")
+    #     self.text_label3.config(text="")
+    #     self.text_label4.config(text="",bg=self.color["fondo"])
+
+
+    # # self.combo existe en interfaz
+    # # cambio_seleccion_api existe en interfaz
+    #     # llamar a la una funcion de Propiedades que cree variables alli y luego volver a esta funcion para cambiar labels
+    
+    # # cambio_seleccion_api existe en Propiedades
+    #     # tengo que tener una instancia de Propiedades en Interfaz y eso no
+    
+
+    # def cambio_seleccion_api(self) -> None:
+    #     """
+    #     Esta funcion se ejecuta cada vez que se selecciona una nueva opcion
+    #     de la lista desplegable de API's.
+    #     Reemplazara el repositorio activo por el seleccionado
+    #     Reemplazara la rama activa por la rama seleccionada del nuevo repositorio activo
+    #     Reemplaza los valores de las etiquetas en la interfaz que muestran estos datos
+    #     """
+    #     api = self.combo.get()
+    #     repo_activo = str(api)
+    #     asginar_repo_y_rama_activa(repo_activo)
+    #     self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
+    #     self.text_label.config(text=f"La API seleccionada es: {self.repo_activo}")
+    #     self.text_label2.config(text=f"La rama seleccionada es: {self.rama_repo_activo}")
+    #     self.text_label3.config(text="")
+    #     self.text_label4.config(text="",bg=self.color["fondo"])
+        
+    # def cambio_seleccion_api(self) -> None:
+    #     """
+    #     Esta funcion se ejecuta cada vez que se selecciona una nueva opcion
+    #     de la lista desplegable de API's.
+    #     Reemplazara el repositorio activo por el seleccionado
+    #     Reemplazara la rama activa por la rama seleccionada del nuevo repositorio activo
+    #     Reemplaza los valores de las etiquetas en la interfaz que muestran estos datos
+    #     """
+    #     self.repo_activo = str(element)
+    #     self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
+    #     interfaz.cambiar_labels(api, rama)
+        
 
     def recuperar_texto_caja_texto(self) -> None:
         """
@@ -421,6 +474,7 @@ class Properties:
         self.ruta_properties = None
         self.datos_encriptar = None
         self.__cargar_toml()
+        self.encriptacion = Encriptacion(self.datos_encriptar)
         self.repos_activos = self.get_git_branch()
         self.repo_activo = ""
         self.text_label = None
@@ -453,6 +507,26 @@ class Properties:
         }
         self.combo = None
         self.text = None
+
+    # Nueva
+    # def click_cabecera(self, boton, accion) -> None:
+    #     """
+    #     Cada vez que se presiona un boton, se ejecuta esta funcion.
+    #     Recibe el objeto boton y la accion asociada a ese boton en forma de cadena de texto.
+    #     Dependiendo de la accion seleccionada, se ejecutara el codigo correspondiente.
+
+    #     Args:
+    #         boton (tk.Button): Objeto del boton presionado.
+    #         accion (str): Cadena de texto con la accion correspondiente al boton.
+    #     """
+    #     if accion == "Activar":
+    #         self.activo = not self.activo
+    #         self.cambiar_color_boton(boton, self.activo)
+            
+    #     elif accion == "ComprobarProperties":
+    #         if not self.activo:
+    #             return
+    #         self.chequear_existencia_properties()
 
     def __cargar_toml(self):
         try:
@@ -538,7 +612,7 @@ class Properties:
         try:
             for propertie in string_copiada_usuario:
                 archivo = archivo[propertie]
-            es_secure, valor = self.__es_secure_propertie(archivo)
+            es_secure, valor = self.encriptacion.es_secure_propertie(archivo, self.ruta_base, self.repo_activo)
             if es_secure:
                 return valor
             return archivo
@@ -547,69 +621,10 @@ class Properties:
             print("La propertie no existe")
         return "La propertie no existe"
 
-    def __peticion_api_secure_properties(self, key, propertie):
-        dataList = []
-        json_data = {'operation': 'decrypt',
-            'algorithm': 'Blowfish',
-            'mode': 'CBC',
-            'key': key,
-            'value': propertie,
-            'method': 'string'}
-        boundary = self.datos_encriptar["boundary"]
-        url = self.datos_encriptar["url"]
-        headers = self.datos_encriptar["headers"]
-        for key, data in json_data.items():
-            dataList.append(encode('--' + boundary))
-            dataList.append(encode(f'Content-Disposition: form-data; name={key};'))
-            dataList.append(encode('Content-Type: {}'.format('text/plain')))
-            dataList.append(encode(''))
-            dataList.append(encode(data))
-
-        dataList.append(encode('--'+boundary+'--'))
-        dataList.append(encode(''))
-        body = b'\r\n'.join(dataList)
-        response = requests.request("POST", url, headers=headers, data=body, files=[])
-        return json.loads(response.text)["property"]
-
-    # Sin uso por ahora
-    def __desencriptar_usando_java(key, propertie):
-        propertie_desencriptada = subprocess.Popen(["java","-cp","secure-properties-tool.jar","com.mulesoft.tools.SecurePropertiesTool","string","decrypt","Blowfish","CBC",key,propertie], stdout=subprocess.PIPE).communicate()[0]
-        return propertie_desencriptada.decode('UTF-8').rstrip()
-
-    def __desencriptar_propertie(self, propertie):
-        key = self.__buscar_encrypt_key()
-        print(key, propertie)
-        valor_desencriptada = self.__peticion_api_secure_properties(key, propertie)
-        return valor_desencriptada
-    
-    def __es_secure_propertie(self, propertie):
-        es_secure = False
-        valor = None
-        if type(propertie) == dict:
-            return es_secure,valor
-        
-        if propertie[:2] == "![" and propertie[-1] == "]":
-            es_secure = True
-            valor = self.__desencriptar_propertie(propertie[2:-1])
-        return es_secure,valor
-
     def __buscar_valores_env(self, cadena):
             patron = r'(?<=name="env" value=")[^"]+(?=")'
             valores = re.findall(patron, cadena)
             return valores
-
-    def __buscar_encrypt_key(self):
-        encrypt_key = None
-        try:
-            tree = ET.parse(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml")
-            resultados = tree.findall('.//{http://www.mulesoft.org/schema/mule/core}global-property')
-            for x in resultados:
-                if x.attrib['name'] != "env":
-                    encrypt_key = x.attrib['value']
-        except Exception as e:
-            print(f"{self.repo_activo} No tiene global")
-
-        return encrypt_key
     
     def buscar_entorno_en_global(self):
         entorno = None
@@ -922,7 +937,8 @@ class Properties:
         button1.config(bg="#00c22d")
 
 
-    def cambio_seleccion_api(self, event):
+    def cambio_seleccion_api(self, event, objeto):
+
         element = self.combo.get()
         self.repo_activo = str(element)
         self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
@@ -967,7 +983,7 @@ class Properties:
         self.text_label4.pack()
 
         self.combo = ttk.Combobox(state="readonly", values=list(elements.keys()),font="Verdana 16 bold")
-        self.combo.bind("<<ComboboxSelected>>", self.cambio_seleccion_api)
+        self.combo.bind("<<ComboboxSelected>>", lambda event, instancia=self.combo: self.cambio_seleccion_api(event, instancia))
         self.combo.set("Selecciona una api")
         self.combo.pack() 
         self.boton_copiar = tk.Button(root, text=f"Copy", width=5, height=2, font=("Arial", 11))

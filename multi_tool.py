@@ -232,11 +232,6 @@ class Interfaz:
         button4.config(command=lambda btn=button4: self.click_cabecera(btn,None))
         button1.config(bg="#00c22d")
 
-
-# self.combo deberia existir en esta clase
-# la funcion deberia existir en Propiedades
-# la funcion deberia tomar como parametro lo que haya en el combobox
-# 
     def cambio_seleccion_api(self) -> None:
         """
         Esta funcion se ejecuta cada vez que se selecciona una nueva opcion
@@ -245,58 +240,28 @@ class Interfaz:
         Reemplazara la rama activa por la rama seleccionada del nuevo repositorio activo
         Reemplaza los valores de las etiquetas en la interfaz que muestran estos datos
         """
-        element = self.combo.get()
-        self.repo_activo = str(element)
-        self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
-        self.text_label.config(text=f"La API seleccionada es: {self.repo_activo}")
-        self.text_label2.config(text=f"La rama seleccionada es: {self.rama_repo_activo}")
+        api = self.combo.get()         # Instancia de Propiedades
+        repo_activo, rama_repo_activo = self.propiedades.cambiar_repo_y_rama_activa(str(api))
+        self.text_label.config(text=f"La API seleccionada es: {repo_activo}")
+        self.text_label2.config(text=f"La rama seleccionada es: {rama_repo_activo}")
         self.text_label3.config(text="")
         self.text_label4.config(text="",bg=self.color["fondo"])
 
-    # def cambiar_labels(self, api, rama):
-    #     self.text_label.config(text=f"La API seleccionada es: {str(api)}")
-    #     self.text_label2.config(text=f"La rama seleccionada es: {rama}")
-    #     self.text_label3.config(text="")
-    #     self.text_label4.config(text="",bg=self.color["fondo"])
+    def cambiar_repo_y_rama_activa(self, api:str) -> None:
+        """
+        Recibe la seleccion de repositorio hecha por el usuario y actualiza
+        el repo activo y la rama que posee ese repo
 
+        Args:
+            api (str): _description_
 
-    # # self.combo existe en interfaz
-    # # cambio_seleccion_api existe en interfaz
-    #     # llamar a la una funcion de Propiedades que cree variables alli y luego volver a esta funcion para cambiar labels
-    
-    # # cambio_seleccion_api existe en Propiedades
-    #     # tengo que tener una instancia de Propiedades en Interfaz y eso no
-    
+        Returns:
+            _type_: _description_
+        """
+        self.repo_activo = api
+        self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
 
-    # def cambio_seleccion_api(self) -> None:
-    #     """
-    #     Esta funcion se ejecuta cada vez que se selecciona una nueva opcion
-    #     de la lista desplegable de API's.
-    #     Reemplazara el repositorio activo por el seleccionado
-    #     Reemplazara la rama activa por la rama seleccionada del nuevo repositorio activo
-    #     Reemplaza los valores de las etiquetas en la interfaz que muestran estos datos
-    #     """
-    #     api = self.combo.get()
-    #     repo_activo = str(api)
-    #     asginar_repo_y_rama_activa(repo_activo)
-    #     self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
-    #     self.text_label.config(text=f"La API seleccionada es: {self.repo_activo}")
-    #     self.text_label2.config(text=f"La rama seleccionada es: {self.rama_repo_activo}")
-    #     self.text_label3.config(text="")
-    #     self.text_label4.config(text="",bg=self.color["fondo"])
-        
-    # def cambio_seleccion_api(self) -> None:
-    #     """
-    #     Esta funcion se ejecuta cada vez que se selecciona una nueva opcion
-    #     de la lista desplegable de API's.
-    #     Reemplazara el repositorio activo por el seleccionado
-    #     Reemplazara la rama activa por la rama seleccionada del nuevo repositorio activo
-    #     Reemplaza los valores de las etiquetas en la interfaz que muestran estos datos
-    #     """
-    #     self.repo_activo = str(element)
-    #     self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
-    #     interfaz.cambiar_labels(api, rama)
-        
+        return self.repo_activo, self.rama_repo_activo
 
     def recuperar_texto_caja_texto(self) -> None:
         """
@@ -308,32 +273,37 @@ class Interfaz:
         pyperclip.copy(contenido)
 
 class Archivos:
-    def __cargar_toml(self) -> None:
+    def __cargar_toml(self) -> dict[str:str|dict]:
         """
-        Carga el archivo .toml y popula variables con los datos
+        Carga el archivo .toml y devuelve un dict con los datos
 
         Raises:
-            e: error
+            e: Error
+
+        Returns:
+            dict[str:str|dict]: Un diccionario con los datos que fueron cargados del archivo .toml
         """
         try:
             config = toml.load("config.toml")
-            self.ruta_base = rf'{config["paths"]["repositorios"]}'
-            self.ruta_properties = rf'{config["config_files"]["apis_properties"]}'
-            self.datos_encriptar = config["encryption"]
-            self.datos_encriptar["headers"]["Content-type"] = self.datos_encriptar["headers"]["Content-type"].replace("TOBEREPLACED", self.datos_encriptar["boundary"])
-
+            datos_encriptar = config["encryption"]
+            datos_encriptar["headers"]["Content-type"] = self.datos_encriptar["headers"]["Content-type"].replace("TOBEREPLACED", self.datos_encriptar["boundary"])
+            datos = {
+                "ruta_base": rf'{config["paths"]["repositorios"]}',
+                "ruta_properties": rf'{config["config_files"]["apis_properties"]}',
+                "datos_encriptar": datos_encriptar
+            }
+            return datos
         except Exception as e:
             raise e
 
-    def cargar_json_datos(self) -> dict:
+    def cargar_json(self, ruta) -> dict:
         """
-        Abre el archivo .json donde se encuentran los entornos y rutas de archivos
-        de configuracion.
+        Abre un archivo JSON
 
         Returns:
-            dict: Diccionario con propiedades de las API's
+            dict: JSON
         """
-        with open(self.ruta_properties, "r") as f:
+        with open(ruta, "r") as f:
             return json.load(f)  
 
     def __cargar_yaml(self, ruta: str) -> dict | Error:
@@ -368,7 +338,7 @@ class Archivos:
         valores = re.findall(patron, cadena)
         return valores
 
-    def buscar_entorno_en_global(self) -> str:
+    def buscar_entorno_en_global(self, ruta_base, repo_activo) -> str:
         """
         Abre el archivo global.xml correspondiente al repositorio activo y busca la variable "env"
 
@@ -377,7 +347,7 @@ class Archivos:
         """
         entorno = None
         try:
-            with open(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml", "r") as f:
+            with open(rf"{ruta_base}\berge-mulesoft-{repo_activo}\src\main\mule\global.xml", "r") as f:
                 entorno = self.__buscar_valores_env(f.read())[0]
                 print(entorno)
         except:

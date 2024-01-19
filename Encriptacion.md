@@ -45,3 +45,5 @@ Propiedades, Encriptacion y Archivos seran instancias
 dentro de esta.
 
 Todos los regex deberian estar en un archivo de config
+
+buscar_propertie los replace sobre la string deberian ser un metodo aparte

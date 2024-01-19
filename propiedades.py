@@ -6,29 +6,21 @@ import time
 import os
 import subprocess
 import yaml
-import json
 from tkinter.tix import *
 from ttkthemes import ThemedTk
 import re
-import toml
-import xml.etree.ElementTree as ET
-import requests
 from codecs import encode
-# s-3pl.host
 
+from archivos import *
+from encriptacion import *
+from interfaz import *
 
-    
+class Error(Exception):
+    def __init__(self, descripcion) -> None:
+        self.descripcion = descripcion
 
-
-
-
-
-
-    
-#Cuando junto YAMLS:
-# Si hay dos campos iguales
-#   Si el campo es un objeto: los tengo que juntar
-#   Si el campo es una string: siempre tengo que priorizar el del entorno
+    def __repr__(self) -> str:
+        return self.descripcion
 
 class Properties:
     def __init__(self) -> None:
@@ -36,17 +28,15 @@ class Properties:
         self.ruta_base = None
         self.ruta_properties = None
         self.datos_encriptar = None
-        self.__cargar_toml()
-        self.encriptacion = Encriptacion(self.datos_encriptar)
+        self.instancia_archivos = Archivos()
+        self.asignar_valor_desde_toml()
+        self.instancia_encriptacion = Encriptacion(self.datos_encriptar)
+        self.instancia_interfaz = Interfaz()
         self.repos_activos = self.get_git_branch()
         self.repo_activo = ""
-        self.text_label = None
-        self.text_label2 = None
-        self.text_label3 = None
-        self.text_label4 = None
-        self.json_properties = self.cargar_json_datos()
-        self.solo_ramas_entornos = ["master", "release", "release_sp", "release_pr", "develop_sp", "develop_pr", "global"]
+        self.json_properties = self.instancia_archivos.cargar_json(self.ruta_properties)
         self.activo = True
+        self.solo_ramas_entornos = ["master", "release", "release_sp", "release_pr", "develop_sp", "develop_pr", "global"]
         self.color = {
             "activo": "#00c22d",
             "inactivo": "#c2000d",
@@ -70,41 +60,36 @@ class Properties:
         }
         self.combo = None
         self.text = None
+        self.text_label = None
+        self.text_label2 = None
+        self.text_label3 = None
+        self.text_label4 = None
 
-    # Nueva
-    # def click_cabecera(self, boton, accion) -> None:
-    #     """
-    #     Cada vez que se presiona un boton, se ejecuta esta funcion.
-    #     Recibe el objeto boton y la accion asociada a ese boton en forma de cadena de texto.
-    #     Dependiendo de la accion seleccionada, se ejecutara el codigo correspondiente.
+    def asignar_valor_desde_toml(self):
+        valores = self.instancia_archivos.cargar_toml()
+        self.ruta_base = valores["ruta_base"]
+        self.ruta_properties = valores["ruta_properties"]
+        self.datos_encriptar = valores["datos_encriptar"]
+    
+    def click_cabecera(self, boton, accion) -> None:
+        """
+        Cada vez que se presiona un boton, se ejecuta esta funcion.
+        Recibe el objeto boton y la accion asociada a ese boton en forma de cadena de texto.
+        Dependiendo de la accion seleccionada, se ejecutara el codigo correspondiente.
 
-    #     Args:
-    #         boton (tk.Button): Objeto del boton presionado.
-    #         accion (str): Cadena de texto con la accion correspondiente al boton.
-    #     """
-    #     if accion == "Activar":
-    #         self.activo = not self.activo
-    #         self.cambiar_color_boton(boton, self.activo)
+        Args:
+            boton (tk.Button): Objeto del boton presionado.
+            accion (str): Cadena de texto con la accion correspondiente al boton.
+        """
+        if accion == "Activar":
+            self.activo = not self.activo
+            self.instancia_interfaz.cambiar_color_boton(boton, self.activo)
             
-    #     elif accion == "ComprobarProperties":
-    #         if not self.activo:
-    #             return
-    #         self.chequear_existencia_properties()
+        elif accion == "ComprobarProperties":
+            if not self.activo:
+                return
+            self.chequear_existencia_properties()
 
-    def __cargar_toml(self):
-        try:
-            config = toml.load("config.toml")
-            self.ruta_base = rf'{config["paths"]["repositorios"]}'
-            self.ruta_properties = rf'{config["config_files"]["apis_properties"]}'
-            self.datos_encriptar = config["encryption"]
-            self.datos_encriptar["headers"]["Content-type"] = self.datos_encriptar["headers"]["Content-type"].replace("TOBEREPLACED", self.datos_encriptar["boundary"])
-
-        except Exception as e:
-            raise e
-
-    def cargar_json_datos(self):
-        with open(self.ruta_properties, "r") as f:
-            return json.load(f)  
 
     def get_git_branch(self) -> dict[str, str]:
         """
@@ -133,27 +118,6 @@ class Properties:
 
         return {k.split("berge-mulesoft-")[1]:v for k,v in repos_activos.items()}
 
-    # Sin uso por ahora
-    def button_click(self, btn, element, btns, repos):
-        print("Texto del elemento:", element) 
-
-        self.repo_activo = ""
-        self.rama_repo_activo = ""
-
-        for button in btns:
-            button.config(relief=tk.RAISED)
-            button.config(fg="black")
-            button.config(bg=self.color["fondo"])
-        btn.config(fg=self.color["rojo"])
-        btn.config(bg=self.color["rojo_fondo"])
-        btn.config(relief=tk.SUNKEN) 
-        self.repo_activo = str(element)
-        self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
-        self.text_label.config(text=f"La API seleccionada es: {str(element)}")
-        self.text_label2.config(text=f"La rama seleccionada es: {self.repos_activos[self.repo_activo]['branch']}")
-        self.text_label3.config(text="")
-        self.text_label4.config(text="",bg=self.color["fondo"])
-        print(repos[element])
 
     def buscar_propertie(self, archivo_yaml:str, string_copiada_usuario:str) -> str:
         """
@@ -171,44 +135,28 @@ class Properties:
         string_copiada_usuario = string_copiada_usuario.replace("{","").replace("}","").replace("$","").replace("secure::","").replace("Mule::p","").replace("p::","").replace("(","").replace(")","").replace('"',"").replace("'","").split(".")
         archivo = archivo_yaml
         if not archivo:
-            return Error("Error")
+            raise Error("No existe el archivo")
         try:
             for propertie in string_copiada_usuario:
                 archivo = archivo[propertie]
-            es_secure, valor = self.encriptacion.es_secure_propertie(archivo, self.ruta_base, self.repo_activo)
+            es_secure, valor = self.instancia_encriptacion.es_secure_propertie(archivo, self.ruta_base, self.repo_activo)
             if es_secure:
                 return valor
             return archivo
-        except Exception as e:
+        except KeyError as e:
             print(e)
             print("La propertie no existe")
         return "La propertie no existe"
 
-    def __buscar_valores_env(self, cadena):
-            patron = r'(?<=name="env" value=")[^"]+(?=")'
-            valores = re.findall(patron, cadena)
-            return valores
-    
-    def buscar_entorno_en_global(self):
-        entorno = None
-        try:
-            with open(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml", "r") as f:
-                entorno = self.__buscar_valores_env(f.read())[0]
-                print(entorno)
-        except:
-            print("No tiene global.xml")
+    def __obtener_rutas_archivos_config_a_revisar(self) -> list[str]:
+        """
+        Para buscar si existe una propiedad en el repositorio, necesito encontrarla en los 
+        archivos .yaml, este metodo devuelve la ruta de los archivos .yaml 
+        donde se va a buscar la propiedad.
 
-        return entorno
-
-    def __cargar_yaml(ruta):
-        with open(ruta, 'r') as archivo:
-            try:
-                contenido = yaml.safe_load(archivo)
-            except:
-                contenido = Error(f"Hubo un error al intentar cargar el archivo yaml: {ruta}")
-        return contenido
-
-    def __obtener_rutas_archivos_config_a_revisar(self):
+        Returns:
+            list[str]: Rutas de los archivos .yaml
+        """
         rutas_properties = []
         entorno = None
         self.properties_repo_activo = self.json_properties[self.repo_activo]
@@ -234,50 +182,6 @@ class Properties:
         
         return rutas_properties
 
-    def intentar_abrir_archivo(self, string_copiada_usuario: str) -> dict[str:list[str]]:
-        """
-        Obtiene las rutas de los archivos a revisar, abre cada uno y busca la propiedad
-        que copio el usuario
-
-        Args:
-            string_copiada_usuario (str): Lo que haya en el portapapeles del usuario.
-
-        Returns:
-            dict[str:list[str]]: Un diccionario cuya clave es el nombre del archivo y como valor
-            una lista donde se guardaran las propiedades encontradas
-        """
-        print(self.repo_activo)
-        print(self.rama_repo_activo)
-        rutas_properties = self.__obtener_rutas_archivos_config_a_revisar()
-        print(rutas_properties)
-        properties = {}
-        for ruta in rutas_properties:
-            with open(ruta, 'r') as archivo:
-                if ruta.split("/")[-1] not in properties:
-                    properties[ruta.split("/")[-1]] = []
-                try:
-                    contenido = yaml.safe_load(archivo)
-                    properties[ruta.split("/")[-1]].append(self.buscar_propertie(contenido, string_copiada_usuario))
-                except Exception as e:
-                    print(f"Hubo un error al intentar cargar el archivo yaml: {ruta}")
-                    contenido = None
-                    properties[ruta.split("/")[-1]].append(f"Hubo un error al intentar cargar el archivo yaml: {ruta}")
-    
-        return properties
-#s-proxy
-    def __formatear_properties(self, properties):
-        string_a_mostrar = ""
-        for archivo, propertie in properties:
-            string_a_mostrar += "\n"
-            string_a_mostrar += archivo
-            string_a_mostrar += "\n"
-            string_a_mostrar += "\n"
-            string_a_mostrar += str(propertie) if propertie else ""
-            string_a_mostrar += "\n"
-            string_a_mostrar += "\n"
-            
-        return string_a_mostrar
-#app.name
     def handle_key_event(self, evento:keyboard._Event) -> None:
         """
         Cada vez que se aprete algo en el teclado se llama a esta funcion.
@@ -303,8 +207,6 @@ class Properties:
                     properties = "No existe"
                 print("properties", type(properties), properties)
                 string_a_mostrar, posiciones_a_colorear = self.__formatear_existencia_properties(properties)
-                # texto_properties_encontradas = "\n".join([prop for prop in properties if prop])
-                #color_fondo_texto = self.color["verde"] if texto_properties_encontradas else self.color["rojo"]
                 self.text.config(state=tk.NORMAL)
                 self.text.delete("1.0", tk.END)
                 self.text.insert(tk.END,string_a_mostrar)
@@ -318,73 +220,6 @@ class Properties:
                 # self.text_label4.config(text=texto_properties_encontradas if texto_properties_encontradas else "No existe la propertie" ,bg=color_fondo_texto)
                 print(self.rama_repo_activo)
                 print(properties)
-
-                
-#s-proxy.port
-    # def create_buttons(self, root, elements):
-    #     button_frame = tk.Frame(root)
-    #     button_frame.pack()
-    #     buttons = []
-
-    #     for i, element in enumerate(elements):
-    #         wrapped_text = textwrap.shorten(element, width=21, placeholder="...")
-    #         button = tk.Button(button_frame, text=f"{wrapped_text}\n{elements[element]['branch']}", width=21, height=2, font=("Arial", 10))
-    #         button.grid(row=i // 3, column=i % 3, padx=5, pady=5)
-    #         button.config(command=lambda btn=button, ele=element, btns=buttons, repos=elements: self.button_click(btn, ele, btns, repos))
-
-    #         buttons.append(button)
-
-    def __juntar_yamls(self):
-        rutas_properties = self.__obtener_rutas_archivos_config_a_revisar()
-        yaml_junto = {}
-        for ruta in rutas_properties:
-            with open(f"{ruta}", "r") as f:
-                try:
-                    archivo = yaml.safe_load(f)
-                except:
-                    print(f"Error al abrir: {ruta}")
-            for key in archivo:
-                if key not in yaml_junto:
-                    yaml_junto[key] = archivo[key]
-                else:
-                    valor = yaml_junto[key]
-                    yaml_junto[key].update(archivo[key])
-        
-        return yaml_junto
-    
-#Cuando junto YAMLS:
-# Si hay dos campos iguales
-#   Si el campo es un objeto: los tengo que juntar
-#   Si el campo es una string: siempre tengo que priorizar el del entorno
-
-    def __formatear_existencia_properties(self, dict_xmls):
-        """
-        Devuelve una cadena de texto de una sola linea con espacios y "\n" y una lista de posiciones.
-        Estas posiciones hacen referencia a la posicion del nombre del archivo 
-        dentro de la cadena de texto de una sola linea
-        El proposito es colorear los nombres de los archivos utilizando las posiciones retornadas.
-
-        Args:
-            dict_xmls (dict[str,list[str]]): Diccionario donde se especifica el nombre del archivo como clave
-        y como valor, una lista de las propiedades correspondientes a dicho archivo.
-
-        Returns:
-            tuple[str,list[list[int,int]]]: Una cadena de texto de una sola linea con espacios y "\n" y una lista de posiciones.
-        """
-        posiciones_a_colorear = []
-        string_a_devolver = ""
-        fila = 1
-        for nombre, properties in dict_xmls.items():
-            if properties:
-                fila += 1
-                string_a_devolver += "\n"
-                string_a_devolver += nombre + "\n"
-                posiciones_a_colorear.append([fila,len(nombre)])
-                for prop in properties:
-                    string_a_devolver += f"    {prop}\n"
-                    fila += 1
-                fila += 1
-        return string_a_devolver, posiciones_a_colorear
 
     def chequear_existencia_properties(self) -> None:
         """
@@ -401,7 +236,7 @@ class Properties:
         if not self.activo:
             return
         rutas_properties = self.__obtener_rutas_archivos_config_a_revisar()
-        yaml_junto = self.__juntar_yamls()
+        yaml_junto = self.instancia_archivos.juntar_yamls()
         ruta_base_xml = f"{self.ruta_base}/berge-mulesoft-{self.repo_activo}/src/main/mule"
         rutas_xmls = [f"{ruta_base_xml}/{nombre}" for nombre in os.listdir(ruta_base_xml) if nombre[-3:] == "xml"]
         
@@ -453,68 +288,34 @@ class Properties:
             self.text.tag_config(f"x{i}", foreground="red")
         self.text.config(state=tk.DISABLED)
 
-    def click_cabecera(self, boton:tk.Button, accion:str) -> None:
+    def intentar_abrir_archivo(self, string_copiada_usuario: str, rutas_properties: list[str]) -> dict[str:list[str]]: #rutas_properties = __obtener_rutas_archivos_config_a_revisar
         """
-        Cada vez que se presiona un boton, se ejecuta esta funcion.
-        Recibe el objeto boton y la accion asociada a ese boton en forma de cadena de texto.
-        Dependiendo de la accion seleccionada, se ejecutara el codigo correspondiente.
+        Obtiene las rutas de los archivos a revisar, abre cada uno y busca la propiedad
+        que copio el usuario
 
         Args:
-            boton (tk.Button): Objeto del boton presionado.
-            accion (str): Cadena de texto con la accion correspondiente al boton.
+            string_copiada_usuario (str): Lo que haya en el portapapeles del usuario.
+            rutas_properties (list[str]): Listado de archivos .yaml donde buscar la propiedad.
+
+        Returns:
+            dict[str:list[str]]: Un diccionario cuya clave es el nombre del archivo y como valor
+            una lista donde se guardaran las propiedades encontradas
         """
-        if accion == "Activar":
-            self.activo = not self.activo
-            texto_boton = "Activo" if self.activo else "Inactivo"
-            boton[0].config(text=texto_boton)
-            for btn in boton:
-                btn.config(bg=self.color[texto_boton.lower()])
+        print(rutas_properties)
+        properties = {}
 
-        elif accion == "ComprobarProperties":
-            if not self.activo:
-                return
-            self.chequear_existencia_properties()
+        for ruta in rutas_properties:
+            if ruta.split("/")[-1] not in properties:
+                properties[ruta.split("/")[-1]] = []
+            try:
+                contenido = self.instancia_archivos.cargar_yaml(ruta)
+                properties[ruta.split("/")[-1]].append(self.buscar_propertie(contenido, string_copiada_usuario))
+            except (yaml.YAMLError, FileNotFoundError) as e:
+                contenido = None
+                properties[ruta.split("/")[-1]].append(f"Hubo un error al intentar cargar el archivo yaml: {ruta}")
 
-    def crear_botones_cabecera(self, root:ThemedTk) -> None:
-        """
-        Crea y ubica los botones que se visualizan en la parte superior de la aplicacion.
+        return properties
 
-        Args:
-            root (ThemedTk): Ventana principal creada.
-        """
-        button_frame = tk.Frame(root)
-        button_frame.pack()
-
-        button1 = tk.Button(button_frame, text=f"Activo", width=11, height=2, font=("Arial", 16))
-        button2 = tk.Button(button_frame, text=f"Comprobar\nProperties", width=11, height=2, font=("Arial", 16))
-        button3 = tk.Button(button_frame, text=f"3", width=11, height=2, font=("Arial", 16))
-        button4 = tk.Button(button_frame, text=f"4", width=11, height=2, font=("Arial", 16))
-        button1.grid(row=0, column=1, padx=5, pady=5)
-        button2.grid(row=0, column=2, padx=5, pady=5)
-        button3.grid(row=0, column=3, padx=5, pady=5)
-        button4.grid(row=0, column=4, padx=5, pady=5)
-        button1.config(command=lambda btn=[button1, button2, button3, button4]: self.click_cabecera(btn,"Activar"))
-        button2.config(command=lambda btn=button2: self.click_cabecera(btn,"ComprobarProperties"))
-        button3.config(command=lambda btn=button3: self.click_cabecera(btn,None))
-        button4.config(command=lambda btn=button4: self.click_cabecera(btn,None))
-        button1.config(bg="#00c22d")
-
-
-    def cambio_seleccion_api(self, event, objeto):
-
-        element = self.combo.get()
-        self.repo_activo = str(element)
-        self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
-        self.text_label.config(text=f"La API seleccionada es: {str(element)}")
-        self.text_label2.config(text=f"La rama seleccionada es: {self.repos_activos[self.repo_activo]['branch']}")
-        self.text_label3.config(text="")
-        self.text_label4.config(text="",bg=self.color["fondo"])
-        # print(self.combo.get())
-
-    def recuperar_texto_caja_texto(self):
-        contenido = self.text.get("1.0",'end-1c')
-        print(contenido)
-        pyperclip.copy(contenido)
 
     def main(self):
         elements = self.repos_activos
@@ -565,11 +366,3 @@ class Properties:
         keyboard.on_press(self.handle_key_event)
 
         root.mainloop()
-
-
-if __name__ == "__main__":
-    clase = Properties()
-    clase.main()
-
-# a = subprocess.Popen(["java","-cp","C:/Users/Pedro/Desktop/Pedro/secure-properties-tool.jar","com.mulesoft.tools.SecurePropertiesTool","string","decrypt","Blowfish","CBC","b3rg3Mul3s@ft!","S/iUEdGiT8h1t1ayQhZvkA=="], stdout=subprocess.PIPE).communicate()[0]
-# print(a.decode('UTF-8').rstrip())

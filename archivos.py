@@ -29,10 +29,26 @@ class Archivos:
         except Exception as e:
             raise e
 
+    def cargar_archivo(self, ruta) -> str:
+        """
+        Abre un archivo
+
+        Args:
+            ruta (str): Ruta del archivo a abrir
+        
+        Returns:
+            dict: 
+        """
+        with open(ruta, "r") as f:
+            return f.read()  
+
     def cargar_json(self, ruta) -> dict:
         """
         Abre un archivo JSON
 
+        Args:
+            ruta (str): Ruta del archivo .json a abrir
+        
         Returns:
             dict: JSON
         """

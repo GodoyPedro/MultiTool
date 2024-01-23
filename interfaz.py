@@ -1,9 +1,78 @@
 import tkinter as tk
+from tkinter import ttk
 import pyperclip
 from tkinter.tix import *
 from ttkthemes import ThemedTk
 
 class Interfaz:
+    
+    def __init__(self, repos_activos) -> None:
+        self.repos_activos = repos_activos
+        self.color = ""
+        self.combo = ""
+        self.combo = None
+        self.text = None
+        self.text_label = None
+        self.text_label2 = None
+        self.text_label3 = None
+        self.text_label4 = None
+        self.button1 = None
+        self.button2 = None
+        self.button3 = None
+        self.button4 = None
+        self.color = {
+            "activo": "#00c22d",
+            "inactivo": "#c2000d",
+            "fondo": "#f0f0f0",
+            "negro": "#000000",
+            "rojo": "#ff0000",
+            "rojo_fondo": "#f59090",
+            "verde": "#008000"
+        }
+        self.crear_interfaz()
+        
+    def crear_interfaz(self):
+        self.root = ThemedTk(theme="arc")
+        self.root.resizable(width=False, height=False)
+        self.root.title("Ventana con Texto y Botones")
+        
+        button_frame = tk.Frame(self.root)
+        button_frame.pack()
+        self.button1 = tk.Button(button_frame, text=f"Activo", width=11, height=2, font=("Arial", 16))
+        self.button2 = tk.Button(button_frame, text=f"Comprobar\nProperties", width=11, height=2, font=("Arial", 16))
+        self.button3 = tk.Button(button_frame, text=f"3", width=11, height=2, font=("Arial", 16))
+        self.button4 = tk.Button(button_frame, text=f"4", width=11, height=2, font=("Arial", 16))
+        self.button1.grid(row=0, column=1, padx=5, pady=5)
+        self.button2.grid(row=0, column=2, padx=5, pady=5)
+        self.button3.grid(row=0, column=3, padx=5, pady=5)
+        self.button4.grid(row=0, column=4, padx=5, pady=5)
+        self.button1.config(bg="#00c22d")
+        
+        text_frame = tk.Frame(self.root, height=130)
+        text_frame.pack_propagate(0)
+        text_frame.pack(expand = False, fill = tk.BOTH)
+        self.text_label = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
+        self.text_label2 = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
+        self.text_label3 = tk.Label(text_frame, text="", font=("Arial", 18))
+        self.text_label4 = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
+        self.text_label.pack()
+        self.text_label2.pack()
+        self.text_label3.pack()
+        self.text_label4.pack()
+        self.combo = ttk.Combobox(state="readonly", values=list(self.repos_activos.keys()),font="Verdana 16 bold")
+        self.combo.set("Selecciona una api")
+        self.combo.pack() 
+        self.boton_copiar = tk.Button(self.root, text=f"Copy", width=5, height=2, font=("Arial", 11))
+        self.scroll = tk.Scrollbar(self.root, orient='vertical')
+        self.text = tk.Text(self.root, width=70, height=10, yscrollcommand=self.scroll.set)
+        self.text.config(font=('Helvatical bold',20))
+        self.text.tag_configure("even", background="#e0e0e0")
+        self.text.insert(tk.END,"prueba")
+        self.text.config(state=tk.DISABLED)
+        self.boton_copiar.pack(anchor="ne")
+        self.text.pack(side=tk.LEFT, pady=(0, 10))
+        self.scroll.pack(side=tk.LEFT, fill='y')
+        self.scroll.config(command=self.text.yview)
     
     # Sin uso actualmente
     def __formatear_properties(self, properties):
@@ -19,7 +88,18 @@ class Interfaz:
             
         return string_a_mostrar
 
-    def formatear_existencia_properties(self, dict_xmls:dict[str,list[str]]) -> tuple[str,list[list[int,int]]]:
+    def formatear_properties_escribir_texto(self, dict_xmls:dict[str,list[str]], color:str) -> tuple[str,list[list[int,int]]]:
+        string_a_mostrar, posiciones_a_colorear = self.__formatear_existencia_properties(dict_xmls)
+        self.text.config(state=tk.NORMAL)
+        self.text.delete("1.0", tk.END)
+        self.text.insert(tk.END,string_a_mostrar)
+        for i, posiciones in enumerate(posiciones_a_colorear):
+            fila, largo = posiciones
+            self.text.tag_add(f"x{i}", f"{fila}.0", f"{fila}.{largo}")
+            self.text.tag_config(f"x{i}", foreground=color)
+        self.text.config(state=tk.DISABLED)
+
+    def __formatear_existencia_properties(self, dict_xmls:dict[str,list[str]]) -> tuple[str,list[list[int,int]]]:
         """
         Devuelve una cadena de texto de una sola linea con espacios y "\n" y una lista de posiciones.
         Estas posiciones hacen referencia a la posicion del nombre del archivo 
@@ -61,60 +141,20 @@ class Interfaz:
         for btn in boton:
             btn.config(bg=self.color[texto_boton.lower()])
 
-    def crear_botones_cabecera(self, root:ThemedTk) -> None:
+
+    def cambiar_valores_labels_info_labels(self, repo_activo:str, rama_repo_activo:str) -> None:
         """
-        Crea y ubica los botones que se visualizan en la parte superior de la aplicacion.
+        Actualiza el texto de las labels en pantalla
 
         Args:
-            root (ThemedTk): Ventana principal creada.
+            repo_activo (str): Nombre del repositorio activo
+            rama_repo_activo (str): Nombre de la rama del repositorio activo
         """
-        button_frame = tk.Frame(root)
-        button_frame.pack()
-
-        button1 = tk.Button(button_frame, text=f"Activo", width=11, height=2, font=("Arial", 16))
-        button2 = tk.Button(button_frame, text=f"Comprobar\nProperties", width=11, height=2, font=("Arial", 16))
-        button3 = tk.Button(button_frame, text=f"3", width=11, height=2, font=("Arial", 16))
-        button4 = tk.Button(button_frame, text=f"4", width=11, height=2, font=("Arial", 16))
-        button1.grid(row=0, column=1, padx=5, pady=5)
-        button2.grid(row=0, column=2, padx=5, pady=5)
-        button3.grid(row=0, column=3, padx=5, pady=5)
-        button4.grid(row=0, column=4, padx=5, pady=5)
-        button1.config(command=lambda btn=[button1, button2, button3, button4]: self.click_cabecera(btn,"Activar"))
-        button2.config(command=lambda btn=button2: self.click_cabecera(btn,"ComprobarProperties"))
-        button3.config(command=lambda btn=button3: self.click_cabecera(btn,None))
-        button4.config(command=lambda btn=button4: self.click_cabecera(btn,None))
-        button1.config(bg="#00c22d")
-
-    def cambio_seleccion_api(self) -> None:
-        """
-        Esta funcion se ejecuta cada vez que se selecciona una nueva opcion
-        de la lista desplegable de API's.
-        Reemplazara el repositorio activo por el seleccionado
-        Reemplazara la rama activa por la rama seleccionada del nuevo repositorio activo
-        Reemplaza los valores de las etiquetas en la interfaz que muestran estos datos
-        """
-        api = self.combo.get()         # Instancia de Propiedades
-        repo_activo, rama_repo_activo = self.propiedades.cambiar_repo_y_rama_activa(str(api))
         self.text_label.config(text=f"La API seleccionada es: {repo_activo}")
         self.text_label2.config(text=f"La rama seleccionada es: {rama_repo_activo}")
         self.text_label3.config(text="")
         self.text_label4.config(text="",bg=self.color["fondo"])
 
-    def cambiar_repo_y_rama_activa(self, api:str) -> None:
-        """
-        Recibe la seleccion de repositorio hecha por el usuario y actualiza
-        el repo activo y la rama que posee ese repo
-
-        Args:
-            api (str): _description_
-
-        Returns:
-            _type_: _description_
-        """
-        self.repo_activo = api
-        self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
-
-        return self.repo_activo, self.rama_repo_activo
 
     def recuperar_texto_caja_texto(self) -> None:
         """

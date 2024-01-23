@@ -31,21 +31,14 @@ class Properties:
         self.instancia_archivos = Archivos()
         self.asignar_valor_desde_toml()
         self.instancia_encriptacion = Encriptacion(self.datos_encriptar)
-        self.instancia_interfaz = Interfaz()
         self.repos_activos = self.get_git_branch()
+        self.instancia_interfaz = Interfaz(self.repos_activos)
+        self.asignar_funciones()
         self.repo_activo = ""
         self.json_properties = self.instancia_archivos.cargar_json(self.ruta_properties)
         self.activo = True
         self.solo_ramas_entornos = ["master", "release", "release_sp", "release_pr", "develop_sp", "develop_pr", "global"]
-        self.color = {
-            "activo": "#00c22d",
-            "inactivo": "#c2000d",
-            "fondo": "#f0f0f0",
-            "negro": "#000000",
-            "rojo": "#ff0000",
-            "rojo_fondo": "#f59090",
-            "verde": "#008000"
-        }
+        
         self.mapeo_entornos_variable_env = {
             "pro":"master",
             "prod": "master",
@@ -58,14 +51,22 @@ class Properties:
             "devproj":"develop_pr",
             "local":"local"
         }
-        self.combo = None
-        self.text = None
-        self.text_label = None
-        self.text_label2 = None
-        self.text_label3 = None
-        self.text_label4 = None
+        
 
-    def asignar_valor_desde_toml(self):
+    def cambiar_repo_y_rama_activa(self, event) -> None:
+        """
+        Actualiza el repo activo y la rama que posee ese repo, como tambien las labels 
+        que muestran estos valores en la ventana
+        """
+        api = self.instancia_interfaz.combo.get() 
+        self.repo_activo = api
+        self.rama_repo_activo = self.repos_activos[self.repo_activo]['branch']
+        self.instancia_interfaz.cambiar_valores_labels_info_labels(self.repo_activo, self.rama_repo_activo)
+
+    def asignar_valor_desde_toml(self) -> None:
+        """
+        Abre el archivo toml y almacena los valores en variables
+        """
         valores = self.instancia_archivos.cargar_toml()
         self.ruta_base = valores["ruta_base"]
         self.ruta_properties = valores["ruta_properties"]
@@ -89,7 +90,6 @@ class Properties:
             if not self.activo:
                 return
             self.chequear_existencia_properties()
-
 
     def get_git_branch(self) -> dict[str, str]:
         """
@@ -117,7 +117,6 @@ class Properties:
         os.chdir(self.dir_base)
 
         return {k.split("berge-mulesoft-")[1]:v for k,v in repos_activos.items()}
-
 
     def buscar_propertie(self, archivo_yaml:str, string_copiada_usuario:str) -> str:
         """
@@ -165,7 +164,7 @@ class Properties:
         if self.rama_repo_activo in self.solo_ramas_entornos:
             entorno = self.rama_repo_activo
         else:
-            entorno = self.mapeo_entornos_variable_env[self.buscar_entorno_en_global()]
+            entorno = self.mapeo_entornos_variable_env[self.instancia_archivos.buscar_entorno_en_global()]
         lista_rutas_a_revisar = []
         claves_a_revisar = [entorno,"global","siempre"]
         for clave in claves_a_revisar:
@@ -197,29 +196,36 @@ class Properties:
             print("Se presionó Ctrl+C")
             time.sleep(0.1)
             string_copiada_usuario = pyperclip.paste()
-            self.text_label3.config(text=string_copiada_usuario)
+            self.instancia_interfaz.text_label3.config(text=string_copiada_usuario)
             if not self.repo_activo:
-                self.text_label2.config(text="Seleccionar una api antes")
+                self.instancia_interfaz.text_label2.config(text="Seleccionar una api antes")
             else:
                 try:
-                    properties = self.intentar_abrir_archivo(string_copiada_usuario)
+                    properties = self.buscar_propertie_en_archivos(string_copiada_usuario)
                 except:
                     properties = "No existe"
                 print("properties", type(properties), properties)
-                string_a_mostrar, posiciones_a_colorear = self.__formatear_existencia_properties(properties)
-                self.text.config(state=tk.NORMAL)
-                self.text.delete("1.0", tk.END)
-                self.text.insert(tk.END,string_a_mostrar)
-                for i, posiciones in enumerate(posiciones_a_colorear):
-                    fila, largo = posiciones
-                    self.text.tag_add(f"x{i}", f"{fila}.0", f"{fila}.{largo}")
-                    self.text.tag_config(f"x{i}", foreground="green")
-                self.text.config(state=tk.DISABLED)
-                # self.text.insert(tk.END,properties if properties else "No existe la propertie" )
-                self.text.config(state=tk.DISABLED)
-                # self.text_label4.config(text=texto_properties_encontradas if texto_properties_encontradas else "No existe la propertie" ,bg=color_fondo_texto)
+                self.instancia_interfaz.formatear_properties_escribir_texto(properties, "green")
                 print(self.rama_repo_activo)
                 print(properties)
+
+    def buscar_properties_regex(self, archivo:str) -> list[str]:
+        resultados_corchetes = re.findall(r"\$\{[^}]*\}", archivo, re.DOTALL)
+        resultados_mule_p_simple = re.findall(r"Mule::p\('[^']*'\)", archivo, re.DOTALL)
+        resultados_mule_p_dobles = re.findall(r"""Mule::p\("[^"]*"\)""", archivo, re.DOTALL)
+        resultados_p_simple = re.findall(r"p\('[^']*'\)", archivo, re.DOTALL)
+        resultados_p_doble = re.findall(r"""p\("[^"]*"\)""", archivo, re.DOTALL)
+
+        resultados_flows_limpias = [x.replace("${","").replace("}","") for x in resultados_corchetes]
+        resultados_mule_p_simples_limpias = [x.replace("Mule::p('","").replace("')","") for x in resultados_mule_p_simple]
+        resultados_mule_p_dobles_limpias = [x.replace('Mule::p("',"").replace('")',"") for x in resultados_mule_p_dobles]
+        resultados_p_simples_limpias = [x.replace("p('","").replace("')","") for x in resultados_p_simple]
+        resultados_p_dobles_limpias = [x.replace('p("',"").replace('")',"") for x in resultados_p_doble]
+        #Aca estan todas las properties
+        resultados = list(set(resultados_flows_limpias + resultados_mule_p_simples_limpias + resultados_mule_p_dobles_limpias + resultados_p_simples_limpias + resultados_p_dobles_limpias))
+        resultados = map(lambda x: x.replace("secure::",""), resultados)
+
+        return resultados
 
     def chequear_existencia_properties(self) -> None:
         """
@@ -236,7 +242,7 @@ class Properties:
         if not self.activo:
             return
         rutas_properties = self.__obtener_rutas_archivos_config_a_revisar()
-        yaml_junto = self.instancia_archivos.juntar_yamls()
+        yaml_junto = self.instancia_archivos.juntar_yamls(rutas_properties)
         ruta_base_xml = f"{self.ruta_base}/berge-mulesoft-{self.repo_activo}/src/main/mule"
         rutas_xmls = [f"{ruta_base_xml}/{nombre}" for nombre in os.listdir(ruta_base_xml) if nombre[-3:] == "xml"]
         
@@ -246,24 +252,9 @@ class Properties:
         dict_xmls = {nombre:[] for nombre in os.listdir(ruta_base_xml) if nombre[-3:] == "xml"}
 
         #Recorro cada XML y les extraigo las properties
-        for archivox in rutas_xmls:
-            with open(archivox, "r") as f:
-                datos = f.read()
-
-            resultados_corchetes = re.findall(r"\$\{[^}]*\}", datos, re.DOTALL)
-            resultados_mule_p_simple = re.findall(r"Mule::p\('[^']*'\)", datos, re.DOTALL)
-            resultados_mule_p_dobles = re.findall(r"""Mule::p\("[^"]*"\)""", datos, re.DOTALL)
-            resultados_p_simple = re.findall(r"p\('[^']*'\)", datos, re.DOTALL)
-            resultados_p_doble = re.findall(r"""p\("[^"]*"\)""", datos, re.DOTALL)
-
-            resultados_flows_limpias = [x.replace("${","").replace("}","") for x in resultados_corchetes]
-            resultados_mule_p_simples_limpias = [x.replace("Mule::p('","").replace("')","") for x in resultados_mule_p_simple]
-            resultados_mule_p_dobles_limpias = [x.replace('Mule::p("',"").replace('")',"") for x in resultados_mule_p_dobles]
-            resultados_p_simples_limpias = [x.replace("p('","").replace("')","") for x in resultados_p_simple]
-            resultados_p_dobles_limpias = [x.replace('p("',"").replace('")',"") for x in resultados_p_doble]
-            #Aca estan todas las properties
-            resultados = list(set(resultados_flows_limpias + resultados_mule_p_simples_limpias + resultados_mule_p_dobles_limpias + resultados_p_simples_limpias + resultados_p_dobles_limpias))
-            resultados = map(lambda x: x.replace("secure::",""), resultados)
+        for archivo_xml in rutas_xmls:
+            datos = self.instancia_archivos.cargar_archivo(archivo_xml)
+            resultados = self.buscar_properties_regex(datos)
             # Recorrer estas properties y fijarme si estan en el yaml de "yaml_junto"
             # Si estan no hago nada
             # Si no estan las agrego a dict_xmls
@@ -273,22 +264,13 @@ class Properties:
                 try:
                     for propertie in propertie_:
                         archivo = archivo[propertie]
-                except:
-                    archivo_solo_nombre = archivox.split("/")[-1]
+                except KeyError:
+                    archivo_solo_nombre = archivo_xml.split("/")[-1]
                     dict_xmls[archivo_solo_nombre].append('.'.join(propertie_))
 
-        string_a_mostrar, posiciones_a_colorear = self.__formatear_existencia_properties(dict_xmls)
+        self.instancia_interfaz.formatear_properties_escribir_texto(dict_xmls, "red")
 
-        self.text.config(state=tk.NORMAL)
-        self.text.delete("1.0", tk.END)
-        self.text.insert(tk.END,string_a_mostrar)
-        for i, posiciones in enumerate(posiciones_a_colorear):
-            fila, largo = posiciones
-            self.text.tag_add(f"x{i}", f"{fila}.0", f"{fila}.{largo}")
-            self.text.tag_config(f"x{i}", foreground="red")
-        self.text.config(state=tk.DISABLED)
-
-    def intentar_abrir_archivo(self, string_copiada_usuario: str, rutas_properties: list[str]) -> dict[str:list[str]]: #rutas_properties = __obtener_rutas_archivos_config_a_revisar
+    def buscar_propertie_en_archivos(self, string_copiada_usuario: str, rutas_properties: list[str]) -> dict[str:list[str]]: #rutas_properties = __obtener_rutas_archivos_config_a_revisar
         """
         Obtiene las rutas de los archivos a revisar, abre cada uno y busca la propiedad
         que copio el usuario
@@ -317,52 +299,20 @@ class Properties:
         return properties
 
 
+    def asignar_funciones(self):
+        self.instancia_interfaz.combo.bind("<<ComboboxSelected>>", self.cambiar_repo_y_rama_activa)
+        self.instancia_interfaz.boton_copiar.config(command=self.instancia_interfaz.recuperar_texto_caja_texto)
+        self.instancia_interfaz.button1.config(command=lambda btn=[self.instancia_interfaz.button1, self.instancia_interfaz.button2, self.instancia_interfaz.button3, self.instancia_interfaz.button4]: self.click_cabecera(btn,"Activar"))
+        self.instancia_interfaz.button2.config(command=lambda btn=self.instancia_interfaz.button2: self.click_cabecera(btn,"ComprobarProperties"))
+        self.instancia_interfaz.button3.config(command=lambda btn=self.instancia_interfaz.button3: self.click_cabecera(btn,None))
+        self.instancia_interfaz.button4.config(command=lambda btn=self.instancia_interfaz.button4: self.click_cabecera(btn,None))
+
     def main(self):
-        elements = self.repos_activos
 
-        root = ThemedTk(theme="arc")
-        root.resizable(width=False, height=False)
-        root.title("Ventana con Texto y Botones")
-
-        # tip= Balloon(root)
-
-        # T = tk.Text(root, height = 5, width = 52)
-        # T.insert(tk.END,"prueba")
-        # T.config(state=tk.DISABLED)
-        # T.pack()
-
-        self.crear_botones_cabecera(root)
-
-        text_frame = tk.Frame(root, height=130)
-        text_frame.pack_propagate(0)
-        text_frame.pack(expand = False, fill = tk.BOTH)
-
-        self.text_label = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
-        self.text_label2 = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
-        self.text_label3 = tk.Label(text_frame, text="", font=("Arial", 18))
-        self.text_label4 = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
-        self.text_label.pack()
-        self.text_label2.pack()
-        self.text_label3.pack()
-        self.text_label4.pack()
-
-        self.combo = ttk.Combobox(state="readonly", values=list(elements.keys()),font="Verdana 16 bold")
-        self.combo.bind("<<ComboboxSelected>>", lambda event, instancia=self.combo: self.cambio_seleccion_api(event, instancia))
-        self.combo.set("Selecciona una api")
-        self.combo.pack() 
-        self.boton_copiar = tk.Button(root, text=f"Copy", width=5, height=2, font=("Arial", 11))
-        self.scroll = tk.Scrollbar(root, orient='vertical')
-        self.text = tk.Text(root, width=70, height=10, yscrollcommand=self.scroll.set)
-        self.text.config(font=('Helvatical bold',20))
-        self.text.tag_configure("even", background="#e0e0e0")
-        self.text.insert(tk.END,"prueba")
-        self.text.config(state=tk.DISABLED)
-        self.boton_copiar.pack(anchor="ne")
-        self.boton_copiar.config(command=self.recuperar_texto_caja_texto)
-        self.text.pack(side=tk.LEFT, pady=(0, 10))
-        self.scroll.pack(side=tk.LEFT, fill='y')
-        self.scroll.config(command=self.text.yview)
-        
         keyboard.on_press(self.handle_key_event)
+        self.instancia_interfaz.root.mainloop()
 
-        root.mainloop()
+        #root.mainloop()
+
+propiedades = Properties()
+propiedades.main()

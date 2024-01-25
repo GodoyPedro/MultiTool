@@ -166,7 +166,7 @@ class Properties:
         else:
             entorno = self.mapeo_entornos_variable_env[self.instancia_archivos.buscar_entorno_en_global()]
         lista_rutas_a_revisar = []
-        claves_a_revisar = [entorno,"global","siempre"]
+        claves_a_revisar = ["siempre","global",entorno]
         for clave in claves_a_revisar:
             if clave and self.properties_repo_activo.get(clave):
                  lista_rutas_a_revisar.extend(self.properties_repo_activo[clave])
@@ -201,8 +201,10 @@ class Properties:
                 self.instancia_interfaz.text_label2.config(text="Seleccionar una api antes")
             else:
                 try:
-                    properties = self.buscar_propertie_en_archivos(string_copiada_usuario)
-                except:
+                    rutas = self.__obtener_rutas_archivos_config_a_revisar()
+                    properties = self.buscar_propertie_en_archivos(string_copiada_usuario, rutas)
+                except Exception as e:
+                    print(e)
                     properties = "No existe"
                 print("properties", type(properties), properties)
                 self.instancia_interfaz.formatear_properties_escribir_texto(properties, "green")

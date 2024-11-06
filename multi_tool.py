@@ -14,7 +14,6 @@ import toml
 import xml.etree.ElementTree as ET
 import requests
 from codecs import encode
-# s-3pl.host
 
 class Error:
     def __init__(self, descripcion) -> None:
@@ -88,7 +87,7 @@ class Encriptacion:
         """
         encrypt_key = None
         try:
-            tree = ET.parse(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml")
+            tree = ET.parse(rf"{self.ruta_base}\{self.repo_activo}\src\main\mule\global.xml")
             resultados = tree.findall('.//{http://www.mulesoft.org/schema/mule/core}global-property')
             for x in resultados:
                 if x.attrib['name'] != "env":
@@ -324,7 +323,7 @@ class Archivos:
         """
         entorno = None
         try:
-            with open(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml", "r") as f:
+            with open(rf"{self.ruta_base}\{self.repo_activo}\src\main\mule\global.xml", "r") as f:
                 entorno = self.__buscar_valores_env(f.read())[0]
                 print(entorno)
         except:
@@ -360,7 +359,7 @@ class Archivos:
         if lista_rutas_a_revisar:
             try:
                 for archivo_prop in lista_rutas_a_revisar:
-                    rutas_properties.append(f"{self.ruta_base}/berge-mulesoft-{self.repo_activo}/{archivo_prop}")
+                    rutas_properties.append(f"{self.ruta_base}/{self.repo_activo}/{archivo_prop}")
             except:
                 print(f"No se pudo abrir el archivo: {archivo_prop}")
         
@@ -428,7 +427,7 @@ class Properties:
         self.text_label3 = None
         self.text_label4 = None
         self.json_properties = self.cargar_json_datos()
-        self.solo_ramas_entornos = ["master", "release", "release_sp", "release_pr", "develop_sp", "develop_pr", "global"]
+        self.solo_ramas_entornos = ["main", "testing", "develop"]
         self.activo = True
         self.color = {
             "activo": "#00c22d",
@@ -440,15 +439,9 @@ class Properties:
             "verde": "#008000"
         }
         self.mapeo_entornos_variable_env = {
-            "pro":"master",
-            "prod": "master",
-            "pre":"release",
-            "preprod":"release",
-            "qa":"release_sp",
-            "qaproj":"release_pr",
-            "latam":"release_pr",
-            "dev":"develop_sp",
-            "devproj":"develop_pr",
+            "prod":"main",
+            "test": "testing",
+            "dev":"develop",
             "local":"local"
         }
         self.combo = None
@@ -494,7 +487,7 @@ class Properties:
 
         os.chdir(self.dir_base)
 
-        return {k.split("berge-mulesoft-")[1]:v for k,v in repos_activos.items()}
+        return {k.split("")[1]:v for k,v in repos_activos.items()}
 
     # Sin uso por ahora
     def button_click(self, btn, element, btns, repos):
@@ -601,7 +594,7 @@ class Properties:
     def __buscar_encrypt_key(self):
         encrypt_key = None
         try:
-            tree = ET.parse(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml")
+            tree = ET.parse(rf"{self.ruta_base}\{self.repo_activo}\src\main\mule\global.xml")
             resultados = tree.findall('.//{http://www.mulesoft.org/schema/mule/core}global-property')
             for x in resultados:
                 if x.attrib['name'] != "env":
@@ -614,7 +607,7 @@ class Properties:
     def buscar_entorno_en_global(self):
         entorno = None
         try:
-            with open(rf"{self.ruta_base}\berge-mulesoft-{self.repo_activo}\src\main\mule\global.xml", "r") as f:
+            with open(rf"{self.ruta_base}\{self.repo_activo}\src\main\mule\global.xml", "r") as f:
                 entorno = self.__buscar_valores_env(f.read())[0]
                 print(entorno)
         except:
@@ -641,7 +634,7 @@ class Properties:
         else:
             entorno = self.mapeo_entornos_variable_env[self.buscar_entorno_en_global()]
         lista_rutas_a_revisar = []
-        claves_a_revisar = [entorno,"global","siempre"]
+        claves_a_revisar = [entorno,"common"]
         for clave in claves_a_revisar:
             if clave and self.properties_repo_activo.get(clave):
                  lista_rutas_a_revisar.extend(self.properties_repo_activo[clave])
@@ -650,7 +643,7 @@ class Properties:
         if lista_rutas_a_revisar:
             try:
                 for archivo_prop in lista_rutas_a_revisar:
-                    rutas_properties.append(f"{self.ruta_base}/berge-mulesoft-{self.repo_activo}/{archivo_prop}")
+                    rutas_properties.append(f"{self.ruta_base}/{self.repo_activo}/{archivo_prop}")
             except:
                 print(f"No se pudo abrir el archivo: {archivo_prop}")
         
@@ -824,7 +817,7 @@ class Properties:
             return
         rutas_properties = self.__obtener_rutas_archivos_config_a_revisar()
         yaml_junto = self.__juntar_yamls()
-        ruta_base_xml = f"{self.ruta_base}/berge-mulesoft-{self.repo_activo}/src/main/mule"
+        ruta_base_xml = f"{self.ruta_base}/{self.repo_activo}/src/main/mule"
         rutas_xmls = [f"{ruta_base_xml}/{nombre}" for nombre in os.listdir(ruta_base_xml) if nombre[-3:] == "xml"]
         
         print(rutas_properties)

@@ -1,0 +1,79 @@
+{"audit-sys-api": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"common-auth-sys-api": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"notifications-sys-api": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"pos-orders-exp-svc": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"pos-orders-prc-api": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"pos-orders-sys-api": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"pos-orders-prc-sync": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"pos-payments-exp-svc": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"pos-payments-prc-api": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
+},
+
+"pos-payments-sys-api": {
+    "ruta":["src/main/resources/properties"],
+    "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
+    "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
+    "develop":["src/main/resources/properties/dev-properties.yaml.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties","src/main/resources/properties/secure-common.yaml"]
+}}

@@ -74,6 +74,6 @@
     "ruta":["src/main/resources/properties"],
     "main":["src/main/resources/properties/prod-properties.yaml","src/main/resources/properties/secure-prod.yaml"],
     "testing":["src/main/resources/properties/test-properties.yaml","src/main/resources/properties/secure-test.yaml"],
-    "develop":["src/main/resources/properties/dev-properties.yaml.yaml","src/main/resources/properties/secure-dev.yaml"],
-    "common":["src/main/resources/properties/common-properties","src/main/resources/properties/secure-common.yaml"]
+    "develop":["src/main/resources/properties/dev-properties.yaml","src/main/resources/properties/secure-dev.yaml"],
+    "common":["src/main/resources/properties/common-properties.yaml","src/main/resources/properties/secure-common.yaml"]
 }}

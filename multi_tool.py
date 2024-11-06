@@ -7,7 +7,7 @@ import os
 import subprocess
 import yaml
 import json
-from tkinter.tix import *
+#from tkinter.tix import *
 from ttkthemes import ThemedTk
 import re
 import toml
@@ -487,7 +487,7 @@ class Properties:
 
         os.chdir(self.dir_base)
 
-        return {k.split("")[1]:v for k,v in repos_activos.items()}
+        return {k:v for k,v in repos_activos.items()}
 
     # Sin uso por ahora
     def button_click(self, btn, element, btns, repos):
@@ -758,12 +758,13 @@ class Properties:
                     archivo = yaml.safe_load(f)
                 except:
                     print(f"Error al abrir: {ruta}")
-            for key in archivo:
-                if key not in yaml_junto:
-                    yaml_junto[key] = archivo[key]
-                else:
-                    valor = yaml_junto[key]
-                    yaml_junto[key].update(archivo[key])
+            if archivo:
+                for key in archivo:
+                    if key not in yaml_junto:
+                        yaml_junto[key] = archivo[key]
+                    else:
+                        valor = yaml_junto[key]
+                        yaml_junto[key].update(archivo[key])
         
         return yaml_junto
     

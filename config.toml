@@ -1,6 +1,7 @@
 title = "Multitool options"
 [paths]
 repositorios = "C:/Users/Pedro/Desktop/Pedro/Python/repos_test"
+reporte = "C:/Users/Pedro/Desktop"
 
 [config_files]
 apis_properties = "apis_properties.json"

@@ -28,6 +28,7 @@ class Properties:
         self.ruta_base = None
         self.ruta_properties = None
         self.datos_encriptar = None
+        self.ruta_escritura_reporte = None
         self.instancia_archivos = Archivos()
         self.asignar_valor_desde_toml()
         self.instancia_encriptacion = Encriptacion(self.datos_encriptar)
@@ -35,10 +36,12 @@ class Properties:
         self.instancia_interfaz = Interfaz(self.repos_activos)
         self.asignar_funciones()
         self.repo_activo = ""
+        self.rama_repo_activo = ""
         self.json_properties = self.instancia_archivos.cargar_json(self.ruta_properties)
         self.activo = True
         self.solo_ramas_entornos = ["master", "release", "release_sp", "release_pr", "develop_sp", "develop_pr", "global"]
         
+
         self.mapeo_entornos_variable_env = {
             "pro":"master",
             "prod": "master",
@@ -71,7 +74,8 @@ class Properties:
         self.ruta_base = valores["ruta_base"]
         self.ruta_properties = valores["ruta_properties"]
         self.datos_encriptar = valores["datos_encriptar"]
-    
+        self.ruta_escritura_reporte = valores["ruta_escritura_reporte"]
+
     def click_cabecera(self, boton, accion) -> None:
         """
         Cada vez que se presiona un boton, se ejecuta esta funcion.
@@ -90,6 +94,14 @@ class Properties:
             if not self.activo:
                 return
             self.chequear_existencia_properties()
+        
+        elif accion == "GenerarReporte":
+            if not self.activo:
+                return
+            if self.ruta_escritura_reporte:
+                self.generar_reporte()
+            else:
+                self.instancia_interfaz.generar_ventana_alerta("Asignar ruta de escritura de reporte en el archivo .toml\n y reiniciar programa")
 
     def get_git_branch(self) -> dict[str, str]:
         """
@@ -164,7 +176,7 @@ class Properties:
         if self.rama_repo_activo in self.solo_ramas_entornos:
             entorno = self.rama_repo_activo
         else:
-            entorno = self.mapeo_entornos_variable_env[self.instancia_archivos.buscar_entorno_en_global()]
+            entorno = self.mapeo_entornos_variable_env[self.instancia_archivos.buscar_entorno_en_global(self.ruta_base, self.repo_activo)]
         lista_rutas_a_revisar = []
         claves_a_revisar = ["siempre","global",entorno]
         for clave in claves_a_revisar:
@@ -266,9 +278,10 @@ class Properties:
                 try:
                     for propertie in propertie_:
                         archivo = archivo[propertie]
-                except KeyError:
+                except (KeyError, TypeError) as e:
                     archivo_solo_nombre = archivo_xml.split("/")[-1]
                     dict_xmls[archivo_solo_nombre].append('.'.join(propertie_))
+
 
         self.instancia_interfaz.formatear_properties_escribir_texto(dict_xmls, "red")
 
@@ -300,14 +313,23 @@ class Properties:
 
         return properties
 
+    def actualizar_repos(self) -> None:
+        nuevos_repos_activos = self.get_git_branch()
+        self.instancia_interfaz.repos_activos = nuevos_repos_activos
+        self.repos_activos = nuevos_repos_activos
+        self.cambiar_repo_y_rama_activa(None)
 
+    def generar_reporte(self) -> None:
+        #Hacer una comprobacion de que en el toml este cargada esta ruta antes de usar el boton.
+        print("Bien")
     def asignar_funciones(self):
         self.instancia_interfaz.combo.bind("<<ComboboxSelected>>", self.cambiar_repo_y_rama_activa)
         self.instancia_interfaz.boton_copiar.config(command=self.instancia_interfaz.recuperar_texto_caja_texto)
         self.instancia_interfaz.button1.config(command=lambda btn=[self.instancia_interfaz.button1, self.instancia_interfaz.button2, self.instancia_interfaz.button3, self.instancia_interfaz.button4]: self.click_cabecera(btn,"Activar"))
         self.instancia_interfaz.button2.config(command=lambda btn=self.instancia_interfaz.button2: self.click_cabecera(btn,"ComprobarProperties"))
-        self.instancia_interfaz.button3.config(command=lambda btn=self.instancia_interfaz.button3: self.click_cabecera(btn,None))
-        self.instancia_interfaz.button4.config(command=lambda btn=self.instancia_interfaz.button4: self.click_cabecera(btn,None))
+        self.instancia_interfaz.button3.config(command=lambda btn=self.instancia_interfaz.button3: self.click_cabecera(btn,"GenerarReporte"))
+        # self.instancia_interfaz.button4.config(command=lambda btn=self.instancia_interfaz.button4: self.click_cabecera(btn,None))
+        self.instancia_interfaz.button5.config(command=self.actualizar_repos)
 
     def main(self):
 
@@ -315,6 +337,6 @@ class Properties:
         self.instancia_interfaz.root.mainloop()
 
         #root.mainloop()
-
+#p-vehiculos.host
 propiedades = Properties()
 propiedades.main()

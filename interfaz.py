@@ -3,13 +3,13 @@ from tkinter import ttk
 import pyperclip
 from tkinter.tix import *
 from ttkthemes import ThemedTk
+from tkinter import messagebox
 
 class Interfaz:
     
     def __init__(self, repos_activos) -> None:
         self.repos_activos = repos_activos
         self.color = ""
-        self.combo = ""
         self.combo = None
         self.text = None
         self.text_label = None
@@ -20,6 +20,7 @@ class Interfaz:
         self.button2 = None
         self.button3 = None
         self.button4 = None
+        self.button5 = None
         self.color = {
             "activo": "#00c22d",
             "inactivo": "#c2000d",
@@ -30,38 +31,48 @@ class Interfaz:
             "verde": "#008000"
         }
         self.crear_interfaz()
-        
+
+    def actualizar_combo_box(self) -> None:
+        self.combo["values"] = list(self.repos_activos.keys())
+
     def crear_interfaz(self):
         self.root = ThemedTk(theme="arc")
         self.root.resizable(width=False, height=False)
         self.root.title("Ventana con Texto y Botones")
         
         button_frame = tk.Frame(self.root)
-        button_frame.pack()
+        # button_frame.pack()
         self.button1 = tk.Button(button_frame, text=f"Activo", width=11, height=2, font=("Arial", 16))
         self.button2 = tk.Button(button_frame, text=f"Comprobar\nProperties", width=11, height=2, font=("Arial", 16))
-        self.button3 = tk.Button(button_frame, text=f"3", width=11, height=2, font=("Arial", 16))
-        self.button4 = tk.Button(button_frame, text=f"4", width=11, height=2, font=("Arial", 16))
+        self.button3 = tk.Button(button_frame, text=f"Generar\nreporte", width=11, height=2, font=("Arial", 16))
+        # self.button4 = tk.Button(button_frame, text=f"4", width=11, height=2, font=("Arial", 16))
+        # self.button6 = tk.Button(button_frame, text=f"5", width=11, height=2, font=("Arial", 16))
         self.button1.grid(row=0, column=1, padx=5, pady=5)
         self.button2.grid(row=0, column=2, padx=5, pady=5)
         self.button3.grid(row=0, column=3, padx=5, pady=5)
-        self.button4.grid(row=0, column=4, padx=5, pady=5)
+        # self.button4.grid(row=0, column=4, padx=5, pady=5)
+        # self.button6.grid(row=0, column=5, padx=5, pady=5)
         self.button1.config(bg="#00c22d")
         
+        button_frame.grid(row=0, column=0, columnspan=4)
+
         text_frame = tk.Frame(self.root, height=130)
         text_frame.pack_propagate(0)
-        text_frame.pack(expand = False, fill = tk.BOTH)
+        text_frame.grid(row=1, column=0, columnspan=4)
         self.text_label = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
         self.text_label2 = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
         self.text_label3 = tk.Label(text_frame, text="", font=("Arial", 18))
         self.text_label4 = tk.Label(text_frame, text="Texto en la parte superior", font=("Arial", 18))
-        self.text_label.pack()
-        self.text_label2.pack()
-        self.text_label3.pack()
-        self.text_label4.pack()
-        self.combo = ttk.Combobox(state="readonly", values=list(self.repos_activos.keys()),font="Verdana 16 bold")
+        self.text_label.grid(row=2,column=0, columnspan=4)
+        self.text_label2.grid(row=3,column=0, columnspan=4)
+        self.text_label3.grid(row=4,column=0, columnspan=4)
+        self.text_label4.grid(row=5,column=0, columnspan=4)
+
+        self.combo = ttk.Combobox(state="readonly", values=list(self.repos_activos.keys()),font="Verdana 16 bold", postcommand=self.actualizar_combo_box)
         self.combo.set("Selecciona una api")
-        self.combo.pack() 
+        self.combo.grid(row=6,column=0, columnspan=2,sticky="e") 
+        self.button5 = tk.Button(self.root, text=f"Refresh", font=("Arial", 11))
+        self.button5.grid(row=6,column=2, columnspan=2,sticky="w") 
         self.boton_copiar = tk.Button(self.root, text=f"Copy", width=5, height=2, font=("Arial", 11))
         self.scroll = tk.Scrollbar(self.root, orient='vertical')
         self.text = tk.Text(self.root, width=70, height=10, yscrollcommand=self.scroll.set)
@@ -69,10 +80,15 @@ class Interfaz:
         self.text.tag_configure("even", background="#e0e0e0")
         self.text.insert(tk.END,"prueba")
         self.text.config(state=tk.DISABLED)
-        self.boton_copiar.pack(anchor="ne")
-        self.text.pack(side=tk.LEFT, pady=(0, 10))
-        self.scroll.pack(side=tk.LEFT, fill='y')
+        # self.boton_copiar.pack(anchor="ne")
+        
+        self.text.grid(pady=10, row=7, column=0, columnspan=3)
+        # self.scroll.pack(side=tk.LEFT, fill='y')
+        self.scroll.grid(pady=10, row=7, column=3, sticky="nse")
+        # self.scroll.pack(side=tk.LEFT, fill='y')
         self.scroll.config(command=self.text.yview)
+        # self.root.grid_rowconfigure(0, weight=1)
+        # self.root.grid_columnconfigure(0, weight=1)
     
     # Sin uso actualmente
     def __formatear_properties(self, properties):
@@ -139,7 +155,8 @@ class Interfaz:
         texto_boton = "Activo" if activo else "Inactivo"
         boton[0].config(text=texto_boton)
         for btn in boton:
-            btn.config(bg=self.color[texto_boton.lower()])
+            if btn:
+                btn.config(bg=self.color[texto_boton.lower()])
 
 
     def cambiar_valores_labels_info_labels(self, repo_activo:str, rama_repo_activo:str) -> None:
@@ -164,3 +181,6 @@ class Interfaz:
         contenido = self.text.get("1.0",'end-1c')
         print(contenido)
         pyperclip.copy(contenido)
+    
+    def generar_ventana_alerta(self, mensaje) -> None:
+        messagebox.showwarning(message=mensaje, title="Atencion")

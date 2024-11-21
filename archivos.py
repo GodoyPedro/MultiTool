@@ -24,7 +24,8 @@ class Archivos:
             datos = {
                 "ruta_base": rf'{config["paths"]["repositorios"]}',
                 "ruta_properties": rf'{config["config_files"]["apis_properties"]}',
-                "datos_encriptar": datos_encriptar
+                "datos_encriptar": datos_encriptar,
+                "ruta_escritura_reporte": rf'{config["paths"]["reporte"]}',
             }
             return datos
         except Exception as e:
@@ -145,14 +146,15 @@ class Archivos:
             print(ruta)
             try:
                 archivo = self.cargar_yaml(ruta)
-                for key in archivo:
-                    print(key)
-                    if key not in yaml_junto:
-                        yaml_junto[key] = archivo[key]
-                    elif yaml_junto[key] == archivo[key] and type(yaml_junto[key]) == str and type(archivo[key]) == str:
-                        pass
-                    elif yaml_junto[key] != archivo[key] and (type(yaml_junto[key]) != str or type(archivo[key]) != str):
-                        self.correr_update_todas_keys(yaml_junto[key],archivo[key])
+                if archivo:
+                    for key in archivo:
+                        print(key)
+                        if key not in yaml_junto:
+                            yaml_junto[key] = archivo[key]
+                        elif yaml_junto[key] == archivo[key] and type(yaml_junto[key]) == str and type(archivo[key]) == str:
+                            pass
+                        elif yaml_junto[key] != archivo[key] and (type(yaml_junto[key]) != str or type(archivo[key]) != str):
+                            self.correr_update_todas_keys(yaml_junto[key],archivo[key])
             except (yaml.YAMLError, FileNotFoundError) as e:
                 print(e)
         print(yaml_junto)
